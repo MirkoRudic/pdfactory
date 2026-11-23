@@ -163,6 +163,7 @@ function renderChrome() {
   document.title = d ? `PDFabrika - ${d.name}` : "PDFabrika";
   $$(".mode").forEach((b) => { b.classList.toggle("on", !!d && b.dataset.mode === S.mode); b.disabled = !d; });
   ["#bSave", "#bSaveMenu", "#bPrint"].forEach((s) => ($(s).disabled = !d));
+  $("#bUndo").disabled = !d || !d.hist.length; $("#bRedo").disabled = !d || !d.fut.length;   // undo for every mode
   const tabs = $("#tabs");
   tabs.hidden = S.docs.length < 2;
   tabs.innerHTML = "";
@@ -357,11 +358,6 @@ function trackPage() {
 function renderVbar() {
   const d = D(); const L = $("#vbarL"), R = $("#vbarR");
   L.innerHTML = ""; R.innerHTML = "";
-  if (S.mode === "edit") {
-    L.innerHTML = `<button class="sq" id="bUndo" aria-label="Poništi">${icon("undo")}</button><button class="sq" id="bRedo" aria-label="Vrati">${icon("redo")}</button>`;
-    $("#bUndo").onclick = () => undo(); $("#bRedo").onclick = () => undo(true);
-    $("#bUndo").disabled = !d.hist.length; $("#bRedo").disabled = !d.fut.length;
-  }
   const noText = [...new Set(d.items.map((i) => i.src))].filter((s) => d.srcInfo[s] && !d.srcInfo[s].hasText);
   if (noText.length) {
     const b = document.createElement("button");
@@ -1361,6 +1357,7 @@ $("#bSaveMenu").onclick = () => {
   openMenu($("#bSaveMenu"), items, { width: 220 });
 };
 $("#bPrint").onclick = printDlg;
+$("#bUndo").onclick = () => undo(); $("#bRedo").onclick = () => undo(true);
 $("#bSettings").onclick = settingsDlg;
 $("#bQuit").onclick = quit;
 $("#zIn").onclick = () => setZoom(S.zoom * 1.15);
