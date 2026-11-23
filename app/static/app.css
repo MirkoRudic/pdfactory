@@ -226,5 +226,3 @@ body.tool-text .ol, body.tool-mark .ol, body.tool-shape .ol { cursor: crosshair;
 .toast { position: fixed; left: 50%; bottom: 64px; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--border);
   border-radius: 10px; padding: 10px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.4); z-index: 950; display: flex; align-items: center; gap: 10px; }
 .isdef { display: flex; align-items: center; gap: 6px; height: 36px; }
-.keys { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; font-size: 13px; }
-.keys .kk { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--muted); }

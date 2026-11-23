@@ -1280,14 +1280,6 @@ async function settingsDlg() {
         }
       }
 
-      const sk = sec("Prečice");
-      const keys = [["Ctrl+O", "Otvori"], ["Ctrl+S", "Sačuvaj"], ["Ctrl+Shift+S", "Sačuvaj kao"], ["Ctrl+P", "Štampaj"], ["Ctrl+W", "Zatvori dokument"],
-        ["Ctrl+Z / Ctrl+Y", "Poništi / Vrati"], ["Ctrl+F, F3", "Pretraga, sledeći"], ["Ctrl + / − / 0", "Zum, 100%"],
-        ["Home / End, PgUp / PgDn", "Prva / poslednja, prethodna / sledeća strana"], ["Delete", "Obriši izabrano"], ["Esc", "Odustani, poništi izbor"],
-        ["Ctrl+C / X / V, Ctrl+D", "Kopiraj / iseci / nalepi element, dupliraj"], ["Enter", "Kucaj u izabranom tekstu"], ["Strelice, Shift+strelice", "Pomeri element"]];
-      const kt = document.createElement("div"); kt.className = "keys";
-      kt.innerHTML = keys.map(([a, b]) => `<span class="kk">${esc(a)}</span><span>${esc(b)}</span>`).join("");
-      sk.appendChild(kt);
       const lg = sec("Dnevnik");
       const box = document.createElement("div"); box.className = "log";
       const ctl = document.createElement("div"); ctl.className = "set-row";
