@@ -14,7 +14,7 @@ Port **8802**, folder `D:\VAJB\pdfabrika`, Python u `.venv`.
 - Čuvanje: `compose()` → upis u `ime.pdf.pfsave` → `os.replace`. Stara verzija ide u `data/rezerva` (poslednjih 20).
 - OCR: PyMuPDF ima ugrađen Tesseract, treba mu samo `tessdata` (`pdfabrika/tessdata`: eng iz repoa, srp i srp_latn kopira instalacija iz `kontrolaizbora\podaci\ocr\tessdata`). Dodaje se nevidljiv sloj teksta (render_mode 3), slika strane se ne menja.
 - Štampa: `app/printing.py`, pywin32/GDI, sopstveni prozor u app (bez Windows dijaloga štampe).
-- Windows: `app/winsetup.py` — prečica, Startup prečica (`--tiho`), registracija kao PDF program (HKCU, `PDFabrika.PDF`), otvaranje stranice Podrazumevane aplikacije. Osvežava se pri svakom pokretanju.
+- Windows: `app/winsetup.py` — prečica, Startup prečica (`--tiho`), registracija kao PDF program (HKCU, `PDFabrika.PDF`), otvaranje stranice Podrazumevane aplikacije. Osvežava se pri svakom pokretanju. Ikonica programa `assets/pdfabrika.ico`, ikonica .pdf fajlova `assets/pdf_fajl.ico` (bela strana, crvena ivica, fabrika sa PDF).
 - `PDFabrika.exe` (u `.venv\Scripts`) = kopija venv `pythonw.exe` sa našom ikonicom (pywin32 resource API). Windows ime i ikonicu programa uzima iz .exe-a; sa pythonw.exe piše „Python“. Ako kopija ne pokrene venv (provera pri pravljenju), koristi se pythonw.exe.
 - Instalacija: `Instaliraj.vbs` → `instaliraj.pyw` (sistemski Python, tkinter prozor sa napretkom, brava protiv duplog pokretanja) → `.venv`, paketi, srp tessdata → `PDFabrika.pyw --instaliraj`.
 

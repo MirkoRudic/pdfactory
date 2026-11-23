@@ -11,7 +11,8 @@ import applog
 log = applog.get("windows")
 APP_DIR = Path(__file__).resolve().parents[1]
 LAUNCHER = APP_DIR / "PDFabrika.pyw"
-ICON = APP_DIR / "assets" / "pdfabrika.ico"
+ICON = APP_DIR / "assets" / "pdfabrika.ico"          # the program
+FILE_ICON = APP_DIR / "assets" / "pdf_fajl.ico"     # .pdf files in Explorer
 PROGID = "PDFabrika.PDF"
 NOWIN = 0x08000000
 WIN = sys.platform == "win32"
@@ -183,7 +184,7 @@ def register():
             winreg.SetValueEx(k, name, 0, winreg.REG_SZ, value)
     base = rf"Software\Classes\{PROGID}"
     put(base, "", "PDF dokument")
-    put(base + r"\DefaultIcon", "", f"{ICON},0")
+    put(base + r"\DefaultIcon", "", f"{FILE_ICON},0")
     put(base + r"\shell\open\command", "", cmd)
     put(base + r"\shell\open", "FriendlyAppName", "PDFabrika")
     put(base + r"\Application", "ApplicationName", "PDFabrika")
