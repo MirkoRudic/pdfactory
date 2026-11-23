@@ -9,7 +9,7 @@ const COLORS = ["#000000", "#ffffff", "#1f3a8a", "#c62f34", "#2e7d32", "#d9a441"
 const MARKS = ["#ffd600", "#7ee07e", "#7fd3ff", "#ff9bd2"];
 
 const S = {
-  docs: [], cur: null, mode: "read", zoom: 1, fit: true, tool: "select", shapeKind: "rect",
+  docs: [], cur: null, mode: "read", zoom: 1, fit: "auto", tool: "select", shapeKind: "rect",
   sel: null, fonts: [], defFont: "Arial", pid: null, hits: [], hit: -1, cropMode: false,
   def: {
     text: { font: null, size: 12, color: "#000000", bold: false, italic: false, underline: false, strike: false, align: "left", lineHeight: 1.2 },
@@ -69,6 +69,7 @@ function addDoc(info) {
     dirty: false, hist: [], fut: [], osel: new Set(), srcInfo: { [info.id]: info }, scroll: 0,
   };
   S.docs.push(d);
+  S.fit = "auto";              // a newly opened file fits its first page
   switchDoc(d.key);
   return d;
 }
@@ -116,7 +117,10 @@ function switchDoc(key) {
   const old = D(); if (old) old.scroll = $("#pages").scrollTop;
   S.cur = key; S.sel = null; S.hits = []; S.hit = -1; $("#q").value = ""; $("#qn").textContent = "";
   renderAll(); persist();
-  const d = D(); if (d) requestAnimationFrame(() => { $("#pages").scrollTop = d.scroll || 0; });
+  const d = D(); if (d) requestAnimationFrame(() => {
+    $("#pages").scrollTop = d.scroll || 0;
+    const pg = $(`.page[data-i="${d.curPage || 0}"]`); if (pg) centerX(pg);
+  });
 }
 
 // ---------- persistence (window closed by accident: the server keeps the files) ----------
@@ -225,8 +229,10 @@ function fitZoom() {
   const d = D(); if (!d) return 1;
   const avail = $("#pages").clientWidth - 48 - 12;
   const it = d.items[d.curPage || 0] || d.items[0];
-  const w = itemDims(it)[0];                        // the page being read; one wide page must not shrink the others
-  return Math.max(0.25, Math.min(2, avail / (w * PT)));
+  const w = itemDims(it)[0];                        // the page being read (first page on open); not the widest page
+  const width = avail / (w * PT);
+  // "auto" (on open): page width, but never above 100% - an A4 page at 161% on a wide screen is too big
+  return Math.max(0.25, Math.min(S.fit === "width" ? 2 : 1, width));
 }
 function renderViewer() {
   const d = D();
@@ -275,12 +281,13 @@ function relayout() {   // zoom changed: resize pages, keep the reading position
     delete pg.dataset.filled;
   });
   host.scrollTop = ratio * host.scrollHeight;
+  const cur = $(`.page[data-i="${d.curPage || 0}"]`, host); if (cur) centerX(cur);
   clearTimeout(relayout.t);
   relayout.t = setTimeout(() => $$(".page", host).forEach((pg) => { const r = pg.getBoundingClientRect(); const hr = host.getBoundingClientRect();
     if (r.bottom > hr.top - 600 && r.top < hr.bottom + 600) fillPage(pg); }), 120);
   renderFooter();
 }
-function setZoom(z, fit = false) {
+function setZoom(z, fit = false) {   // fit: false | "auto" | "width"
   S.fit = fit; S.zoom = Math.max(0.25, Math.min(4, z));
   if (fit) S.zoom = fitZoom();
   relayout();
@@ -340,6 +347,11 @@ function scrollToPage(i, offsetPt = 0) {
   const pg = $(`.page[data-i="${i}"]`); if (!pg) return;
   const host = $("#pages");
   host.scrollTop = pg.offsetTop - 24 + offsetPt * scale();
+  centerX(pg);
+}
+function centerX(pg) {     // wider pages make the strip wider than the window: keep the page being read in the middle
+  const host = $("#pages");
+  host.scrollLeft = Math.max(0, pg.offsetLeft + pg.offsetWidth / 2 - host.clientWidth / 2);
 }
 function trackPage() {
   const d = D(); if (!d || S.mode === "pages") return;
@@ -1364,7 +1376,8 @@ $("#bQuit").onclick = quit;
 $("#zIn").onclick = () => setZoom(S.zoom * 1.15);
 $("#zOut").onclick = () => setZoom(S.zoom / 1.15);
 $("#zVal").onclick = () => openMenu($("#zVal"), [
-  { label: "Uklopi širinu", on: S.fit, fn: () => setZoom(1, true) },
+  { label: "Automatski", on: S.fit === "auto", fn: () => setZoom(1, "auto") },
+  { label: "Uklopi širinu", on: S.fit === "width", fn: () => setZoom(1, "width") },
   ...[0.5, 0.75, 1, 1.25, 1.5, 2, 3].map((z) => ({ label: formatPercent(z), on: !S.fit && Math.abs(S.zoom - z) < 0.01, fn: () => setZoom(z) })),
 ], { width: 150 });
 $("#pages").addEventListener("scroll", () => requestAnimationFrame(trackPage), { passive: true });
@@ -1375,7 +1388,7 @@ $("#q").addEventListener("keydown", (e) => {
 });
 $("#qPrev").onclick = () => gotoHit(S.hit - 1);
 $("#qNext").onclick = () => gotoHit(S.hit + 1);
-addEventListener("resize", () => { if (S.fit && D() && S.mode !== "pages") { clearTimeout(S.rt); S.rt = setTimeout(() => setZoom(1, true), 150); } });
+addEventListener("resize", () => { if (S.fit && D() && S.mode !== "pages") { clearTimeout(S.rt); S.rt = setTimeout(() => setZoom(1, S.fit), 150); } });
 
 addEventListener("keydown", (e) => {
   const typing = e.target.closest && (e.target.closest(".tx") || /INPUT|TEXTAREA/.test(e.target.tagName));

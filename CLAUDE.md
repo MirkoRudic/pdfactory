@@ -30,7 +30,7 @@ Port **8802**, folder `D:\VAJB\pdfabrika`, Python u `.venv`.
 - Ispravka radi na celoj liniji (`lines` u `page_text`): jedna linija je često deset spanova (fontovi, ranije izmene), pa je klik na span pravio mrvice.
 - Ispravljena linija ostaje jedna linija: širina se meri pravim fontom (`white-space:pre`); redakcija je skraćena po visini 18% da ne pojede slova susednih linija.
 - `.page` ima `overflow: clip`: sa `hidden` fokus u širokom tekst-okviru skroluje stranu bočno (sadržaj strane se pomeri ulevo).
-- Uklopi širinu računa po strani koja se čita, ne po najširoj (jedna široka strana je smanjivala sve).
+- Zum pri otvaranju je „Automatski“: širina prve strane, najviše 100% (A4 je na širokom ekranu bio 161%). Računa se po strani koja se čita, ne po najširoj; stranica koja se čita se centrira i vodoravno (šire strane prave širu traku).
 
 - „Proveri“ je gledao samo git (lokalno vs GitHub). Kad je kod na disku noviji od pokrenutog servera (kopiran ili povučen dok app radi), pisalo je „Najnovija verzija“ uz staru verziju. Sada `/api/update` poredi i verziju sa diska sa pokrenutom (`restart`), a Ažuriraj tada samo restartuje.
 - Nove verzije na laptop idu kroz `git push` + Ažuriraj u app (Windows git ima pristup privatnom repou), ne kopiranjem fajlova.
