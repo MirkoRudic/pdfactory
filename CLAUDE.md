@@ -38,6 +38,9 @@ Port **8802**, folder `D:\VAJB\pdfabrika`, Python u `.venv`.
 - Prazan „Dodaj tekst“ ne ostaje na strani i nije korak za Poništi: okvir se pravi bez koraka, korak nastaje na prvom slovu, a prazan okvir se briše kad izgubi fokus (bio je natpis „Tekst“ na svakom kliku).
 - OCR nema podešavanja ni dugme: strane sa slikom i bez teksta (`needsOcr`) se prepoznaju u pozadini čim se fajl otvori (srp_latn+srp+eng); dokument ne postaje „izmenjen“. Strana je zaključana samo dok se čita/piše, sam OCR ide bez brave (inače se strane ne iscrtavaju dok OCR radi).
 
+- Edge prozor app nudi „Ask Edge to help me write“ nad tekst-okvirima: `writingsuggestions="false"` na `<html>` + `--disable-features` sa poznatim imenima Edge funkcija (imena nisu dokumentovana; nije potvrđeno koje deluje).
+- Prvi klik na tekst-okvir ga samo izabere (Delete ga briše), klik na već izabran okvir počinje kucanje.
+
 ## Izuzeci od pravila
 - UI4: Otvori / Sačuvaj kao / izbor foldera koriste standardni Windows prozor (tkinter) — potrebna je prava putanja fajla.
 - O1: nema Windows obaveštenja; OCR i štampa pokazuju napredak u prozoru.

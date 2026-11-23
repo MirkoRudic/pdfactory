@@ -110,7 +110,12 @@ def open_window():
         webbrowser.open(URL)
         return
     subprocess.Popen([exe, f"--app={URL}", f"--user-data-dir={DATA / 'edge'}", "--no-first-run",
-                      "--no-default-browser-check", "--disable-sync", "--start-maximized"])
+                      "--no-default-browser-check", "--disable-sync", "--start-maximized",
+                      # no Edge writing assistant ("Ask Edge to help me write") over text boxes. Edge's feature
+                      # names are not documented; unknown names are ignored, so the known variants are all listed.
+                      "--disable-features=Compose,ComposeInline,msEdgeCompose,msEdgeComposeInline,msComposeInline,"
+                      "msEdgeWritingAssistance,msWritingAssistance,msEdgeCopilotCompose,msCopilotCompose,"
+                      "msEdgeRewrite,msEdgeInlineRewrite,EdgeCompose,msEdgeHelpMeWrite"])
     threading.Thread(target=taskbar_icon, name="ikonica-na-traci", daemon=True).start()
 
 

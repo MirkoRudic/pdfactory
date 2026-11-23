@@ -839,8 +839,9 @@ function overlayDown(e, pg, it) {
     const o = (d.objects[it.uid] || []).find((x) => x.id === objE.dataset.id); if (!o) return;
     if ((o.type === "text" || o.type === "fix") && o.id === S.sel && e.target.closest(".tx") && !handle) return; // caret
     e.preventDefault();
-    if (o.id !== S.sel) select(o.id);
-    dragObj(e, pg, o, handle ? handle.dataset.h : "move");
+    const wasSel = o.id === S.sel;
+    if (!wasSel) select(o.id);
+    dragObj(e, pg, o, handle ? handle.dataset.h : "move", wasSel);
     return;
   }
   const [px, py] = pagePoint(e, pg);
@@ -859,7 +860,7 @@ function overlayDown(e, pg, it) {
     select(null);
   }
 }
-function dragObj(e, pg, o, mode) {
+function dragObj(e, pg, o, mode, wasSel = true) {
   const sc = scale(); const x0 = e.clientX, y0 = e.clientY;
   const start = JSON.parse(JSON.stringify(o)); let moved = false;
   const el = () => $(`.obj[data-id="${o.id}"]`, pg);
@@ -881,7 +882,8 @@ function dragObj(e, pg, o, mode) {
   const up = () => {
     removeEventListener("mousemove", mv); removeEventListener("mouseup", up);
     if (moved) { persist(); if (o.type === "image" && o.allPages) refreshOverlays(); renderPanel(); }
-    else if (o.type === "text" || o.type === "fix") focusText(o);
+    // first click only selects (Delete removes the box); a click on a selected box starts typing
+    else if ((o.type === "text" || o.type === "fix") && wasSel) focusText(o);
   };
   addEventListener("mousemove", mv); addEventListener("mouseup", up);
 }
