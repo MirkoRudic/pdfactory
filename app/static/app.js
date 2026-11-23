@@ -1316,6 +1316,10 @@ async function settingsDlg() {
         <p class="muted">PDFactory license: GNU AGPL 3.0 (because of PyMuPDF). Free to use and share; if it is ever sold or
         published, its source must stay open, or PyMuPDF needs a commercial license.</p>`;
       ab.appendChild(about);
+      const rb = document.createElement("div"); rb.className = "set-row";
+      rb.innerHTML = `<span class="muted">Something not working?</span>`;
+      rb.appendChild(btn(icon("alert") + "Report a problem", () => reportDlg()));
+      ab.appendChild(rb);
       const v = sec("Version");
       const vr = document.createElement("div"); vr.className = "set-row";
       vr.innerHTML = `<span>${esc(s.version)}</span>`;
@@ -1345,6 +1349,30 @@ async function settingsDlg() {
     draw();
   }, [{ label: "Close", value: true, cls: "primary" }]);
   clearInterval(S.defWatch);
+}
+
+// ---------- problem report (by email; no documents, no file names) ----------
+async function reportDlg() {
+  const r = await safe(() => api("/api/report")); if (!r) return;
+  let withLog = true; let text = "";
+  const ok = await modal("Report a problem", (body) => {
+    body.innerHTML = `<label class="field">What happened?<textarea rows="5" class="rep-msg"></textarea></label>`;
+    $("textarea", body).oninput = (e) => (text = e.target.value);
+    body.appendChild(check("Attach the log (no documents or file names)", true, (v) => { withLog = v; $(".rep-log", body).hidden = !v; }));
+    const pre = document.createElement("pre"); pre.className = "log rep-log"; pre.textContent = r.head + "\n" + r.log;
+    body.appendChild(pre);
+    setTimeout(() => $("textarea", body).focus(), 50);
+  }, [{ label: "Cancel", value: false }, { label: "Send by email", value: true, cls: "primary" }]);
+  if (!ok) return;
+  const full = `${text.trim() || "(no description)"}\n\n${r.head}` + (withLog ? `\n\n--- log ---\n${r.log}` : "");
+  let bodyText = full;
+  if (encodeURIComponent(full).length > 1800) {          // mail links are cut by some mail apps: the rest goes via clipboard
+    try { await navigator.clipboard.writeText(full); } catch (e) { /* no clipboard */ }
+    let cut = full; while (encodeURIComponent(cut).length > 1500) cut = cut.slice(0, Math.floor(cut.length * 0.9));
+    bodyText = cut + "\n\n[full report is in the clipboard: paste it here]";
+  }
+  const url = `mailto:${r.to}?subject=${encodeURIComponent("PDFactory problem · " + r.head.split(" · ")[0])}&body=${encodeURIComponent(bodyText)}`;
+  await safe(() => api("/api/report/send", { body: { url } }));
 }
 
 // ---------- bars: update, default program ----------

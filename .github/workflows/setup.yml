@@ -58,6 +58,16 @@ jobs:
         with:
           name: PDFactory-Setup-${{ env.VERSION }}
           path: dist/PDFactory-Setup-${{ env.VERSION }}.exe
+      - name: GitHub Release (installed copies update from here)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "v$env:VERSION" 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create "v$env:VERSION" "dist/PDFactory-Setup-$env:VERSION.exe" --title "PDFactory $env:VERSION" --notes "PDFactory $env:VERSION" --latest
+          }
+          exit 0
       - name: Publish on branch dist
         shell: pwsh
         run: |

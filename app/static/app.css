@@ -228,4 +228,6 @@ body.tool-text .ol, body.tool-mark .ol, body.tool-shape .ol { cursor: crosshair;
 .isdef { display: flex; align-items: center; gap: 6px; height: 36px; }
 .about { display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 1.5; user-select: text; }
 .about p { margin: 0; }
+.rep-msg { width: 100%; box-sizing: border-box; resize: vertical; color: var(--text); }
+.rep-log { height: 160px; margin: 0; }
 .lic { display: grid; grid-template-columns: max-content 1fr max-content; gap: 4px 16px; }

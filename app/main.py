@@ -18,6 +18,7 @@ applog.setup(DATA / "logs", "pdfabrika")
 import fonts  # noqa: E402
 import pdfops  # noqa: E402
 import printing  # noqa: E402
+import selfupdate  # noqa: E402
 import settings  # noqa: E402
 import tempdir  # noqa: E402
 import update  # noqa: E402
@@ -43,6 +44,7 @@ tempdir.init(DATA / "tmp")
 update.init(APP_DIR, version_file="app/version.py", launcher="PDFactory.pyw")
 applog.auto_trim(settings.load().get("log_auto_trim_mb", 500))
 threading.Thread(target=lambda: fonts.init(DATA / "fonts.json"), name="fontovi", daemon=True).start()
+selfupdate.clean(DATA / "updates")
 
 app = FastAPI()
 app.state.quit = None
@@ -422,7 +424,7 @@ def get_settings():
     return {"theme": s["theme"], "ocr_lang": s["ocr_lang"], "tessdata": td, "langs": pdfops.tess_langs(td),
             "version": version.label(), "log_mb": applog.size_mb(),
             "autostart": winsetup.autostart_enabled(), "is_default": winsetup.is_default(),
-            "windows": winsetup.WIN, "git": (APP_DIR / ".git").exists()}
+            "windows": winsetup.WIN, "git": (APP_DIR / ".git").exists() or winsetup.INSTALLED}
 
 
 @app.post("/api/settings")
@@ -462,6 +464,45 @@ def get_log(days: int = 2, problems: bool = False, q: str = ""):
     return {"lines": applog.read(days, problems, q or None), "mb": applog.size_mb()}
 
 
+REPORT_TO = "rudic.mirko@gmail.com"
+
+
+def _redact(line: str) -> str:
+    """No documents and no file names leave the computer: paths become <file>, the user name disappears."""
+    import re
+    line = re.sub(r"[A-Za-z]:\\[^\s'\"()]*(?: [^\s'\"()\\]+)*?\.(pdf|png|jpe?g|webp|bmp|tiff?)\b", "<file>", line, flags=re.I)
+    line = re.sub(r"[A-Za-z]:\\[^\s'\"()]+", "<path>", line)
+    line = re.sub(r"/(home|Users)/[^\s'\"()]+", "<path>", line)
+    line = re.sub(r"\b(open|save|saved|ocr)\s+[^:]+?\.(pdf|png|jpe?g)\b", r"\1 <file>", line, flags=re.I)
+    return line
+
+
+@app.get("/api/report")
+def report():
+    """Text of a problem report: app + Windows version and the last log lines, without documents or file names."""
+    import platform
+    lines = applog.read(days=2, limit=4000)
+    keep = [l for l in lines if "  INFO " not in l[:30]][-60:] + lines[-40:]
+    seen, out = set(), []
+    for l in keep:
+        if l not in seen:
+            seen.add(l)
+            out.append(_redact(l))
+    head = f"{version.label()} · {'installed' if winsetup.INSTALLED else 'dev'} · {platform.platform()}"
+    return {"to": REPORT_TO, "head": head, "log": "\n".join(out[-80:])}
+
+
+@app.post("/api/report/send")
+def report_send(body: dict = Body(...)):
+    url = body.get("url", "")
+    if not url.startswith("mailto:"):
+        return err("Not a mail link.")
+    if winsetup.WIN:
+        os.startfile(url)              # the default mail app (no browser prompt)
+    log.info("problem report opened in the mail app")
+    return {"ok": True}
+
+
 @app.post("/api/log/delete")
 def delete_log(body: dict = Body(...)):
     n = applog.delete_older_than(int(body.get("days", 30)))
@@ -476,6 +517,8 @@ def _disk_version() -> str:
 
 @app.get("/api/update")
 def update_check():
+    if winsetup.INSTALLED:                       # installed copy: new versions are GitHub Releases
+        return selfupdate.check()
     try:
         r = update.check()
     except Exception as e:
@@ -494,6 +537,11 @@ def update_check():
 
 @app.post("/api/update")
 def update_pull():
+    if winsetup.INSTALLED:
+        r = selfupdate.apply(DATA / "updates")
+        if r.get("ok"):                          # the installer replaces the files and starts the new version
+            threading.Timer(1.5, lambda: (app.state.quit() if app.state.quit else None, os._exit(0))).start()
+        return r
     r = update.pull()
     if r.get("ok") and (r.get("changed") or _disk_version() != version.VERSION):
         threading.Timer(0.5, update.restart).start()

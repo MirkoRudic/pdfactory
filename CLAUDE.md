@@ -3,7 +3,7 @@ Važe pravila iz `D:\VAJB\vajb-osnova\PRAVILA.md`. Ovde su arhitektura, zamke i 
 # PDFactory (ranije PDFabrika)
 
 Lokalna zamena za Adobe Reader: čitanje, pretraga, izmene (tekst, ispravka postojećeg teksta, isticanje, oblici, slike, formulari), strane (spajanje, redosled, okretanje, brisanje, izdvajanje, deljenje), OCR, štampa.
-Port **8802**, folder `D:\VAJB\pdfabrika`, Python u `.venv`.
+Port **8802**, folder `D:\VAJB\pdfactory`, repo `MirkoRudic/pdfactory`, Python u `.venv`.
 
 ## Arhitektura
 - `PDFactory.pyw` — pokretač (`PDFabrika.pyw` je samo prelaz sa starog imena: stare prečice i ažuriranje iz 0.1.x ga zovu) (Edge `--app` + ikonica pored sata). Argument putanja = otvori fajl (dvoklik na PDF); `--tiho` = start sa Windows-om bez prozora; `--instaliraj`; `--restart`.
@@ -42,6 +42,9 @@ Port **8802**, folder `D:\VAJB\pdfabrika`, Python u `.venv`.
 - Prvi klik na tekst-okvir ga samo izabere (Delete ga briše), klik na već izabran okvir počinje kucanje.
 
 - Podrazumevani program se čita preko `AssocQueryString` (ASSOCSTR_PROGID), ne iz registra: noviji Windows 11 drži izbor u `UserChoiceLatest\\ProgId`, pa je PDFabrika pisala da nije podrazumevana iako jeste. Promena vrednosti se upisuje u dnevnik.
+
+- Ažuriranje instalirane kopije (`app/selfupdate.py`): GitHub Release `latest` (repo mora biti javan) → traka „New version“ → preuzme Setup u `data/updates`, pokrene ga `/VERYSILENT /DIR=<app>`; installer zatvori app, zameni fajlove i ponovo je pokrene (`[Run] Check: WizardSilent`). Stari installeri se brišu pri sledećem startu. Release pravi workflow na svaki push (`gh release create v<verzija>`).
+- Prijava problema (Settings → About → Report a problem): opis + dnevnik bez dokumenata i imena fajlova (`_redact`: putanje → `<path>`/`<file>`), korisnik vidi šta šalje; ide kao mejl (`mailto:` preko `os.startfile`, bez servera) na `REPORT_TO` u `main.py`. Predugačak tekst ide i u clipboard.
 
 ## Izuzeci od pravila
 - T1, T3: UI je na engleskom (Mirko, 23.11.2026), brojevi engleski (`1,200.50`). Komentari i CLAUDE.md ostaju kako jesu.
