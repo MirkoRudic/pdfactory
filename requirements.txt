@@ -1,7 +1,7 @@
 fastapi>=0.110
 uvicorn>=0.29
 python-multipart>=0.0.9
-pymupdf>=1.24
+pymupdf>=1.26,<2        # 2.x pulls onnxruntime, numpy & co. (+70 MB) and nothing here needs them
 pillow>=10
 pystray>=0.19
 pywin32>=306; sys_platform == "win32"
