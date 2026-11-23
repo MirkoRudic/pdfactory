@@ -26,6 +26,12 @@ Port **8802**, folder `D:\VAJB\pdfabrika`, Python u `.venv`.
 - Ispravka teksta: redakcija samo teksta (`PDF_REDACT_IMAGE_NONE`, `LINE_ART_NONE`), pa novi tekst najbližim instaliranim fontom (`fonts.match`). Pregled u app ima beo okvir; u PDF-u pozadina ostaje kakva jeste.
 - Ispravka teksta ne radi na stranama okrenutim u „Strane“ dok se ne sačuva (tekst sloj nije okrenut).
 
+- Mnogi PDF-ovi (Canva, Acrobat izmene) imaju pogrešno mapirana slova: na strani piše „države“, a izvučeni tekst je „drfave“, „ć“ → „c“, „ili“ → „iii“. Zato „Ispravi tekst“ uzima tekst linije OCR-om prikazane strane (`ocr_rect`, srp_latn+srp+eng) kad se slaže sa izvučenim bar 70% bez kvačica (`/fixtext`).
+- Ispravka radi na celoj liniji (`lines` u `page_text`): jedna linija je često deset spanova (fontovi, ranije izmene), pa je klik na span pravio mrvice.
+- Ispravljena linija ostaje jedna linija: širina se meri pravim fontom (`white-space:pre`); redakcija je skraćena po visini 18% da ne pojede slova susednih linija.
+- `.page` ima `overflow: clip`: sa `hidden` fokus u širokom tekst-okviru skroluje stranu bočno (sadržaj strane se pomeri ulevo).
+- Uklopi širinu računa po strani koja se čita, ne po najširoj (jedna široka strana je smanjivala sve).
+
 ## Izuzeci od pravila
 - UI4: Otvori / Sačuvaj kao / izbor foldera koriste standardni Windows prozor (tkinter) — potrebna je prava putanja fajla.
 - O1: nema Windows obaveštenja; OCR i štampa pokazuju napredak u prozoru.

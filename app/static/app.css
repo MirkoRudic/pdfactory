@@ -1,4 +1,6 @@
 /* PDFabrika - loads after base.css */
+:root, [data-theme="dark"] { --accent: #e0302b; --accent-text: #ffffff; --danger: #ff6b5e; }
+[data-theme="light"] { --accent: #d3241f; --accent-text: #ffffff; --danger: #b3261e; }
 :root { --top: 60px; --bot: 44px; --thumbs: 176px; --panel: 264px; --page-bg: #2a2c31; --sel: #4f8fd9; }
 [data-theme="light"] { --page-bg: #e4e4df; }
 html { overflow: hidden; }                      /* UI10: header and footer fixed, the middle scrolls */
@@ -89,7 +91,7 @@ main > section { flex: 1; min-width: 0; min-height: 0; }
 .search button { height: 28px; width: 28px; }
 .pages { flex: 1; overflow: auto; background: var(--page-bg); scrollbar-gutter: stable; }
 .pages-in { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 24px; width: max-content; min-width: 100%; box-sizing: border-box; }
-.page { position: relative; background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,.35); flex: none; overflow: hidden; }
+.page { position: relative; background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,.35); flex: none; overflow: clip; }  /* clip: focus inside must not scroll the page box */
 .page > img.pg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .tl { position: absolute; inset: 0; user-select: text; cursor: text; }
 .tl span { position: absolute; color: transparent; white-space: pre; transform-origin: 0 0; line-height: 1; }
@@ -121,7 +123,7 @@ body.tool-text .ol, body.tool-mark .ol, body.tool-shape .ol { cursor: crosshair;
 .obj.shape { cursor: move; }
 .obj.shape svg { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
 .obj.mark { mix-blend-mode: multiply; cursor: move; }
-.spanhint { position: absolute; outline: 1.5px dashed var(--accent); background: rgba(217, 164, 65, .12); pointer-events: none; }
+.spanhint { position: absolute; outline: 1.5px dashed var(--accent); background: rgba(224, 48, 43, .08); pointer-events: none; }
 .draft { position: absolute; outline: 1.5px dashed var(--sel); pointer-events: none; }
 .fld { position: absolute; box-sizing: border-box; background: #eef4fc !important; border: 1px solid rgba(79, 143, 217, .6) !important;
   border-radius: 2px !important; padding: 0 3px !important; color: #000 !important; font-size: 12px; }

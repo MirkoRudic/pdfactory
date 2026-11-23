@@ -117,12 +117,17 @@ def match(pdf_font_name: str) -> str:
                "courier": "Courier New", "couriernewps": "Courier New"}
     if nb in aliases and aliases[nb] in _families:
         return aliases[nb]
+    # metric-compatible stand-ins (when the original font is not installed)
+    twins = {"calibri": "Carlito", "cambria": "Caladea", "arial": "Liberation Sans", "timesnewroman": "Liberation Serif",
+             "couriernew": "Liberation Mono", "helvetica": "Liberation Sans"}
     for name in _families:
         if _norm(name) == nb:
             return name
     for name in _families:
         if nb and _norm(name).startswith(nb):
             return name
+    if twins.get(nb) in _families:
+        return twins[nb]
     for fallback in ("Arial", "DejaVu Sans", "Liberation Sans"):
         if fallback in _families:
             return fallback

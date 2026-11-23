@@ -198,6 +198,32 @@ def page_text(src_id: str, n: int):
     return pdfops.page_text(src_id, n)
 
 
+@app.get("/api/src/{src_id}/page/{n}/fixtext")
+def fix_text(src_id: str, n: int, x0: float, y0: float, x1: float, y1: float, text: str = ""):
+    """Text for 'fix text': what the line looks like (OCR) when the PDF's own text is wrongly mapped."""
+    import difflib
+    import unicodedata
+    td = _tessdata()
+    if not td:
+        return {"text": text, "source": "pdf"}
+    have = set(pdfops.tess_langs(td))
+    lang = "+".join(l for l in ("srp_latn", "srp", "eng") if l in have) or settings.load()["ocr_lang"]
+    try:
+        ocr = pdfops.ocr_rect(src_id, n, (x0, y0, x1, y1), lang, td)
+    except Exception:
+        log.exception("fixtext ocr")
+        return {"text": text, "source": "pdf"}
+
+    def plain(t):
+        t = unicodedata.normalize("NFKD", t.replace("đ", "dj").replace("Đ", "Dj"))
+        return "".join(c for c in t if not unicodedata.combining(c)).lower().replace(" ", "")
+    same = difflib.SequenceMatcher(None, plain(ocr), plain(text)).ratio()
+    bad_chars = any(c in text for c in "\ufffd\x83") or any(ord(c) < 32 for c in text)
+    use_ocr = bool(ocr) and (bad_chars or (same > 0.7 and ocr != text))
+    log.info("fixtext ratio %.2f ocr=%s", same, use_ocr)
+    return {"text": ocr if use_ocr else text, "source": "ocr" if use_ocr else "pdf"}
+
+
 @app.get("/api/src/{src_id}/page/{n}/forms")
 def page_forms(src_id: str, n: int):
     return {"fields": pdfops.page_forms(src_id, n)}

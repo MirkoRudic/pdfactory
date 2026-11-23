@@ -141,10 +141,24 @@ def page_text(src_id: str, page: int):
         for w in p.get_text("words", sort=True):
             r = fitz.Rect(w[:4]) * rm
             words.append([round(r.x0, 2), round(r.y0, 2), round(r.x1, 2), round(r.y1, 2), w[4]])
-        spans = []
+        spans, lines = [], []
         d = p.get_text("dict", flags=fitz.TEXT_PRESERVE_WHITESPACE)
         for b in d["blocks"]:
             for line in b.get("lines", []):
+                ls = [sp for sp in line["spans"] if sp["text"].strip()]
+                if ls:   # "fix text" works on a whole line: PDFs often split a line into many spans (fonts, edits)
+                    main = max(ls, key=lambda sp: len(sp["text"].strip()))
+                    r = fitz.Rect()
+                    for sp in ls:
+                        r |= fitz.Rect(sp["bbox"])
+                    r = r * rm
+                    c = main["color"]
+                    lines.append({"bbox": [round(r.x0, 2), round(r.y0, 2), round(r.x1, 2), round(r.y1, 2)],
+                                  "text": "".join(sp["text"] for sp in line["spans"]).strip(),
+                                  "size": round(main["size"], 1), "font": fonts.match(main["font"]), "pdfFont": main["font"],
+                                  "bold": bool(main["flags"] & 16) or "bold" in main["font"].lower(),
+                                  "italic": bool(main["flags"] & 2) or "italic" in main["font"].lower(),
+                                  "color": "#%06x" % c})
                 for sp in line["spans"]:
                     if not sp["text"].strip():
                         continue
@@ -156,7 +170,30 @@ def page_text(src_id: str, page: int):
                                   "bold": bool(sp["flags"] & 16) or "bold" in sp["font"].lower(),
                                   "italic": bool(sp["flags"] & 2) or "italic" in sp["font"].lower(),
                                   "color": "#%06x" % c})
-        return {"words": words, "spans": spans}
+        return {"words": words, "spans": spans, "lines": lines}
+
+
+def ocr_rect(src_id: str, page: int, rect, lang: str, tessdata: str) -> str:
+    """What the text in a rectangle LOOKS like (OCR of the rendered page). Used for 'fix text': many PDFs map
+    their glyphs to wrong letters (č shown, 'c' extracted; 'ž' -> 'f'), so the extracted text can't be trusted."""
+    s = get(src_id)
+    with s.lock:
+        p = s.doc[page]
+        r = fitz.Rect(rect) * p.derotation_matrix
+        r.normalize()
+        r = (r + (-2, -2, 2, 2)) & p.rect
+        pix = p.get_pixmap(dpi=300, clip=r)
+    # a margin around the line helps Tesseract
+    from PIL import Image
+    im = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+    big = Image.new("RGB", (pix.width + 80, pix.height + 80), "white")
+    big.paste(im, (40, 40))
+    buf = io.BytesIO()
+    big.save(buf, "PNG")
+    pm = fitz.Pixmap(buf.getvalue())
+    pm.set_dpi(300, 300)
+    d = fitz.open("pdf", pm.pdfocr_tobytes(language=lang, tessdata=tessdata))
+    return " ".join(d[0].get_text("text").split())
 
 
 def page_forms(src_id: str, page: int):
@@ -257,7 +294,9 @@ def _apply_objects(page, objs: list[dict]):
     # 1. text corrections: remove the old text first (only text, images and lines stay)
     fixes = [o for o in objs if o.get("type") == "fix"]
     for o in fixes:
-        page.add_redact_annot(_to_pdf(page, o["orig"]), fill=False)
+        x0, y0, x1, y1 = o["orig"]
+        inset = (y1 - y0) * 0.18      # line boxes overlap the lines above/below; don't take their letters
+        page.add_redact_annot(_to_pdf(page, (x0, y0 + inset, x1, y1 - inset)), fill=False)
     if fixes:
         page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_NONE, graphics=fitz.PDF_REDACT_LINE_ART_NONE)
     # 2. everything in drawing order
@@ -313,6 +352,16 @@ def _text(page, o):
            f'text-decoration:{deco};text-align:{o.get("align", "left")};white-space:pre-wrap;}}')
     html = "".join(f"<p>{_esc(line) or '&#160;'}</p>" for line in text.split("\n"))
     x, y, w, h = o["x"], o["y"], o["w"], o["h"]
+    if o.get("type") == "fix":
+        # a corrected line stays one line: as wide as the new text needs (measured with the real font)
+        css = css.replace("white-space:pre-wrap", "white-space:pre")
+        f = fonts.file_for(o.get("font") or fonts.default_family(), "bi" if o.get("bold") and o.get("italic")
+                           else "b" if o.get("bold") else "i" if o.get("italic") else "r")
+        try:
+            need = max(fitz.Font(fontfile=f).text_length(line, float(o.get("size", 12))) for line in text.split("\n"))
+            w = max(w, need * 1.04 + 2)
+        except Exception:
+            log.exception("text width")
     disp_h = page.rect.height if page.rotation % 180 == 0 else page.rect.width
     bottom = disp_h
     for grow in (1.0, 1.15, 1.4, 2.0, None):

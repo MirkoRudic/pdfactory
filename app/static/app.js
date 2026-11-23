@@ -4,7 +4,7 @@
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const PT = 96 / 72;                       // px per pt at 100%
-const SRC_COLORS = ["#d9a441", "#4f8fd9", "#4caf50", "#c062d9", "#e5734d", "#3fb8b0"];
+const SRC_COLORS = ["#e0302b", "#4f8fd9", "#4caf50", "#c062d9", "#e5734d", "#3fb8b0"];
 const COLORS = ["#000000", "#ffffff", "#1f3a8a", "#c62f34", "#2e7d32", "#d9a441"];
 const MARKS = ["#ffd600", "#7ee07e", "#7fd3ff", "#ff9bd2"];
 
@@ -223,8 +223,9 @@ function scale() { return S.zoom * PT; }
 function fitZoom() {
   const d = D(); if (!d) return 1;
   const avail = $("#pages").clientWidth - 48 - 12;
-  const maxW = Math.max(...d.items.map((it) => itemDims(it)[0]));
-  return Math.max(0.25, Math.min(2, avail / (maxW * PT)));
+  const it = d.items[d.curPage || 0] || d.items[0];
+  const w = itemDims(it)[0];                        // the page being read; one wide page must not shrink the others
+  return Math.max(0.25, Math.min(2, avail / (w * PT)));
 }
 function renderViewer() {
   const d = D();
@@ -499,7 +500,7 @@ function setProp(target, k, v, defKey) {
 function propsText(box, t) {
   box.appendChild(fontButton(t.font || S.defFont, (f) => setProp(t, "font", f, "text")));
   const r = row(2);
-  r.appendChild(stepper(t.size, 4, 200, 1, (v) => setProp(t, "size", v, "text"), " pt"));
+  r.appendChild(stepper(t.size, 4, 200, 1, (v) => setProp(t, "size", v, "text"), " pt", t.size % 1 ? 1 : 0));
   r.appendChild(stepper(t.lineHeight, 0.8, 3, 0.1, (v) => setProp(t, "lineHeight", Math.round(v * 10) / 10, "text"), "", 1));
   box.appendChild(r);
   const r2 = row(4);
@@ -921,7 +922,7 @@ function drawDraft(e, pg, it, px, py) {
 async function spanAt(px, py, it) {
   if (it.rot) return null;
   const t = await getText(it);
-  return t.spans.find((s) => px >= s.bbox[0] - 1 && px <= s.bbox[2] + 1 && py >= s.bbox[1] - 1 && py <= s.bbox[3] + 1) || null;
+  return (t.lines || t.spans).find((s) => px >= s.bbox[0] - 1 && px <= s.bbox[2] + 1 && py >= s.bbox[1] - 1 && py <= s.bbox[3] + 1) || null;
 }
 async function hoverSpan(e, pg, it) {
   const [px, py] = pagePoint(e, pg);
@@ -944,6 +945,14 @@ async function fixAt(px, py, pg, it) {
     underline: false, strike: false, align: "left", lineHeight: 1.15,
   });
   focusText(o);
+  // many PDFs map letters wrongly (č shown, c extracted): take the text as it looks (OCR of the line)
+  const q = `x0=${s.bbox[0]}&y0=${s.bbox[1]}&x1=${s.bbox[2]}&y1=${s.bbox[3]}&text=${encodeURIComponent(s.text)}`;
+  const r = await api(`/api/src/${it.src}/page/${it.page}/fixtext?${q}`).catch(() => null);
+  if (r && r.text && r.text !== o.text && o.text === s.text) {
+    o.text = r.text; persist();
+    const tx = $(`.obj[data-id="${o.id}"] .tx`);
+    if (tx) { tx.textContent = o.text; if (document.activeElement === tx) focusText(o); }
+  }
 }
 // typing into text boxes
 document.addEventListener("focusin", (e) => {
