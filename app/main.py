@@ -358,10 +358,9 @@ def ocr(src_id: str, body: dict = Body(default={})):
     td = _tessdata()
     if not td:
         return err("Nisu pronađeni jezici za prepoznavanje teksta (tessdata).")
-    have = set(pdfops.tess_langs(td))
-    lang = "+".join(l for l in (body.get("lang") or settings.load()["ocr_lang"]).split("+") if l in have)
-    if not lang:
-        return err("Izabrani jezici za prepoznavanje nisu instalirani.")
+    have = pdfops.tess_langs(td)
+    # no language choice for the user: Serbian (both scripts) and English, whatever is installed
+    lang = "+".join(l for l in ("srp_latn", "srp", "eng") if l in have) or "+".join(have[:3])
     ff = fonts.file_for(fonts.default_family(), "r")
     threading.Thread(target=pdfops.ocr_source, args=(src_id, lang, td, ff), name="ocr", daemon=True).start()
     return {"ok": True, "lang": lang}

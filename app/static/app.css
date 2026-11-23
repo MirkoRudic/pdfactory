@@ -116,7 +116,6 @@ body.tool-text .ol, body.tool-mark .ol, body.tool-shape .ol { cursor: crosshair;
 .obj.crop .h { background: var(--sel); }
 .obj.text, .obj.fix { cursor: move; }
 .obj .tx { outline: none; white-space: pre-wrap; word-break: break-word; min-height: 1em; cursor: text; user-select: text; }
-.obj.text:not(.sel) .tx:empty::before { content: "Tekst"; color: #999; }
 .obj.fix .tx { background: #fff; white-space: pre; }
 .ol.static { pointer-events: none; }
 .obj.image { cursor: move; }

@@ -47,7 +47,9 @@ class Source:
             pages.append({"w": round(r.width, 2), "h": round(r.height, 2), "rot": p.rotation,
                           "forms": bool(p.first_widget)})
         return {"id": self.id, "name": self.name, "path": self.path, "pages": pages,
-                "hasText": any(len(p.get_text("text").strip()) > 20 for p in self.doc)}
+                "hasText": any(len(p.get_text("text").strip()) > 20 for p in self.doc),
+                # a page with a picture and (almost) no text is a scan: recognized in the background
+                "needsOcr": any(len(p.get_text("text").strip()) < 20 and p.get_images() for p in self.doc)}
 
 
 # ---------- opening ----------
@@ -547,18 +549,28 @@ def tess_langs(tessdata: str | None) -> list[str]:
 def ocr_source(src_id: str, lang: str, tessdata: str, fontfile: str | None):
     """Adds an invisible text layer to pages without text. Runs in a thread; progress in s.ocr."""
     s = get(src_id)
+    if s.ocr and s.ocr.get("state") == "radi":
+        return
     s.ocr = {"done": 0, "total": s.doc.page_count, "state": "radi", "added": 0}
     t0 = last = time.time()
     try:
-        with s.lock:
-            for i, p in enumerate(s.doc):
-                if len(p.get_text("text").strip()) < 20:
-                    pix = p.get_pixmap(dpi=300)  # grayscale pixmaps give no text (measured)
-                    ocr = fitz.open("pdf", pix.pdfocr_tobytes(language=lang, tessdata=tessdata))
-                    op = ocr[0]
-                    sx, sy = p.rect.width / op.rect.width, p.rect.height / op.rect.height
+        for i in range(s.doc.page_count):
+            # the page is locked only while it is read or written; the slow OCR runs unlocked,
+            # so pages keep rendering while a long scan is being recognized
+            with s.lock:
+                p = s.doc[i]
+                need = len(p.get_text("text").strip()) < 20
+                pix = p.get_pixmap(dpi=300) if need else None  # grayscale pixmaps give no text (measured)
+                prect = p.rect
+            if need:
+                ocr = fitz.open("pdf", pix.pdfocr_tobytes(language=lang, tessdata=tessdata))
+                op = ocr[0]
+                words = op.get_text("words")
+                sx, sy = prect.width / op.rect.width, prect.height / op.rect.height
+                with s.lock:
+                    p = s.doc[i]
                     rm_inv = p.derotation_matrix
-                    for w in op.get_text("words"):
+                    for w in words:
                         r = fitz.Rect(w[0] * sx, w[1] * sy, w[2] * sx, w[3] * sy)  # display space
                         txt = w[4] + " "
                         fs = max(3.0, r.height * 0.82)
@@ -574,11 +586,11 @@ def ocr_source(src_id: str, lang: str, tessdata: str, fontfile: str | None):
                             p.insert_text(pt, txt, fontsize=fs, render_mode=3, rotate=p.rotation, morph=morph, **kw)
                         except Exception:
                             p.insert_text(pt, txt, fontsize=fs, render_mode=3, rotate=p.rotation, **kw)
-                    s.ocr["added"] += 1
-                s.ocr["done"] = i + 1
-                if time.time() - last > 60:
-                    log.info("ocr %s: %d/%d", s.name, i + 1, s.doc.page_count)
-                    last = time.time()
+                s.ocr["added"] += 1
+            s.ocr["done"] = i + 1
+            if time.time() - last > 60:
+                log.info("ocr %s: %d/%d", s.name, i + 1, s.doc.page_count)
+                last = time.time()
         s.ocr["state"] = "gotovo"
         log.info("ocr %s done: %d pages got text (%d s)", s.name, s.ocr["added"], int(time.time() - t0))
     except Exception:

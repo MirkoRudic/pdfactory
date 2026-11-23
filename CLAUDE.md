@@ -35,6 +35,9 @@ Port **8802**, folder `D:\VAJB\pdfabrika`, Python u `.venv`.
 - „Proveri“ je gledao samo git (lokalno vs GitHub). Kad je kod na disku noviji od pokrenutog servera (kopiran ili povučen dok app radi), pisalo je „Najnovija verzija“ uz staru verziju. Sada `/api/update` poredi i verziju sa diska sa pokrenutom (`restart`), a Ažuriraj tada samo restartuje.
 - Nove verzije na laptop idu kroz `git push` + Ažuriraj u app (Windows git ima pristup privatnom repou), ne kopiranjem fajlova.
 
+- Prazan „Dodaj tekst“ ne ostaje na strani i nije korak za Poništi: okvir se pravi bez koraka, korak nastaje na prvom slovu, a prazan okvir se briše kad izgubi fokus (bio je natpis „Tekst“ na svakom kliku).
+- OCR nema podešavanja ni dugme: strane sa slikom i bez teksta (`needsOcr`) se prepoznaju u pozadini čim se fajl otvori (srp_latn+srp+eng); dokument ne postaje „izmenjen“. Strana je zaključana samo dok se čita/piše, sam OCR ide bez brave (inače se strane ne iscrtavaju dok OCR radi).
+
 ## Izuzeci od pravila
 - UI4: Otvori / Sačuvaj kao / izbor foldera koriste standardni Windows prozor (tkinter) — potrebna je prava putanja fajla.
 - O1: nema Windows obaveštenja; OCR i štampa pokazuju napredak u prozoru.

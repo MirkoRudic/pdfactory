@@ -71,6 +71,7 @@ function addDoc(info) {
   S.docs.push(d);
   S.fit = "auto";              // a newly opened file fits its first page
   switchDoc(d.key);
+  autoOcr();
   return d;
 }
 function itemDims(it) { return it.rot % 180 ? [it.h, it.w] : [it.w, it.h]; }
@@ -86,7 +87,8 @@ function undo(redo = false) {
   if (!from.length) return;
   to.push(snapshot(d));
   const s = JSON.parse(from.pop());
-  d.items = s.items; d.objects = s.objects; d.forms = s.forms; d.dirty = true;
+  d.items = s.items; d.objects = s.objects; d.forms = s.forms;
+  d.dirty = d.hist.length > 0;      // back at the first step = as it was opened or last saved
   S.sel = null; renderAll(); persist();
 }
 async function openPaths(paths) {
@@ -370,13 +372,6 @@ function trackPage() {
 function renderVbar() {
   const d = D(); const L = $("#vbarL"), R = $("#vbarR");
   L.innerHTML = ""; R.innerHTML = "";
-  const noText = [...new Set(d.items.map((i) => i.src))].filter((s) => d.srcInfo[s] && !d.srcInfo[s].hasText);
-  if (noText.length) {
-    const b = document.createElement("button");
-    b.innerHTML = icon("scan") + "Prepoznaj tekst";
-    b.onclick = () => runOcr(noText);
-    R.appendChild(b);
-  }
 }
 
 // ---------- search ----------
@@ -416,29 +411,37 @@ function drawHits(pg) {
 }
 
 // ---------- OCR ----------
-async function runOcr(srcs) {
-  const info = await safe(() => api("/api/ocr/info"));
-  if (!info) return;
-  if (!info.tessdata) { await vd.message("Nisu pronađeni jezici za prepoznavanje teksta. Podesi folder u Podešavanjima."); return; }
-  const d = D();
-  const prog = showProgress("Prepoznavanje teksta…");
-  let added = 0;
-  for (const s of srcs) {
-    const r = await safe(() => api("/api/ocr/" + s, { body: {} }));
-    if (!r) { prog.close(); return; }
+// pages without text (scans) get recognized in the background, no button and no questions
+const ocrStarted = new Set();
+async function autoOcr() {
+  if (autoOcr.busy) return;
+  autoOcr.busy = true;
+  try {
     for (;;) {
-      await new Promise((res) => setTimeout(res, 700));
-      const st = await api(`/api/ocr/${s}/status`).catch(() => ({ state: "greška" }));
-      prog.set(st.total ? st.done / st.total : 0);
-      if (st.state !== "radi") { if (st.state === "greška") { prog.close(); await vd.message("Prepoznavanje nije uspelo. Detalji su u dnevniku."); return; } added += st.added || 0; break; }
+      const want = (x, s) => x.srcInfo[s] && x.srcInfo[s].needsOcr && !ocrStarted.has(s);
+      const d = S.docs.find((x) => x.items.some((i) => want(x, i.src)));
+      if (!d) break;
+      const src = d.items.map((i) => i.src).find((s) => want(d, s));
+      ocrStarted.add(src);
+      const r = await api("/api/ocr/" + src, { body: {} }).catch(() => null);
+      if (!r) continue;
+      for (;;) {
+        await new Promise((res) => setTimeout(res, 800));
+        const st = await api(`/api/ocr/${src}/status`).catch(() => ({ state: "greška" }));
+        $("#fMid").textContent = st.state === "radi" ? `Prepoznavanje teksta ${formatPercent(st.total ? st.done / st.total : 0)}` : "";
+        if (st.state !== "radi") break;
+      }
+      const info = await api("/api/src/" + src).catch(() => null);
+      for (const x of S.docs) if (info && x.srcInfo[src]) x.srcInfo[src] = info;
+      for (const k of [...textCache.keys()]) if (k.startsWith(src + ":")) textCache.delete(k);
+      const cur = D();
+      if (cur && S.mode === "read") $$(".page").forEach((pg) => {     // fresh text layer, page stays where it is
+        const it = cur.items[+pg.dataset.i];
+        if (it && it.src === src && pg.dataset.filled) { $$(".tl", pg).forEach((x) => x.remove()); buildTextLayer(pg, it); }
+      });
+      persist();
     }
-    d.srcInfo[s] = await api("/api/src/" + s);
-    for (const k of [...textCache.keys()]) if (k.startsWith(s + ":")) textCache.delete(k);
-  }
-  prog.close();
-  d.dirty = true; persist();
-  renderAll();
-  toast(added ? `Tekst prepoznat na ${formatNumber(added)} str. Sačuvaj da ostane u fajlu.` : "Nema strana bez teksta.", 4500);
+  } finally { autoOcr.busy = false; $("#fMid").textContent = ""; }
 }
 function showProgress(text) {
   const ov = document.createElement("div"); ov.className = "vd-overlay";
@@ -797,7 +800,10 @@ function addHandles(e, o) {
 }
 function pagePoint(e, pg) { const r = pg.getBoundingClientRect(), sc = scale(); return [(e.clientX - r.left) / sc, (e.clientY - r.top) / sc]; }
 function addObj(uid, o) {
-  const d = D(); commit(d);
+  const d = D();
+  // an empty new text box is not an undo step until something is typed into it
+  if (o.type === "text" && !o.text) Object.defineProperty(o, "_fresh", { value: true, writable: true, enumerable: false });
+  else commit(d);
   o.id = o.id || newUid();
   (d.objects[uid] = d.objects[uid] || []).push(o);
   S.sel = o.id;
@@ -965,11 +971,16 @@ async function fixAt(px, py, pg, it) {
 // typing into text boxes
 document.addEventListener("focusin", (e) => {
   const tx = e.target.closest && e.target.closest(".tx"); if (!tx) return;
-  const o = selObj(); if (o && !tx.dataset.committed) { commit(); tx.dataset.committed = "1"; }
+  const o = selObj(); if (o && !o._fresh && !tx.dataset.committed) { commit(); tx.dataset.committed = "1"; }
 });
 document.addEventListener("input", (e) => {
   const tx = e.target.closest && e.target.closest(".tx"); if (!tx) return;
   const o = selObj(); if (!o) return;
+  if (o._fresh) {          // first letter in a new box: the undo step is "before this box existed"
+    const d = D(); const x = JSON.parse(snapshot(d));
+    for (const k in x.objects) x.objects[k] = x.objects[k].filter((y) => y.id !== o.id);
+    d.hist.push(JSON.stringify(x)); d.fut = []; d.dirty = true; o._fresh = false; tx.dataset.committed = "1"; renderChrome();
+  }
   o.text = tx.innerText.replace(/\n$/, "");
   const sc = scale(); o.h = Math.max(o.h, tx.offsetHeight / sc);
   if (o.type === "fix") { o.w = Math.max(o.orig[2] - o.orig[0], tx.scrollWidth / sc + 2); tx.parentElement.style.width = o.w * sc + "px"; }
@@ -978,8 +989,19 @@ document.addEventListener("input", (e) => {
 document.addEventListener("focusout", (e) => {
   const tx = e.target.closest && e.target.closest(".tx"); if (!tx) return;
   delete tx.dataset.committed;
-  const sc = scale(); const o = selObj();
-  if (o && (o.type === "text" || o.type === "fix")) { o.h = tx.offsetHeight / sc; persist(); }
+  const id = tx.closest(".obj") && tx.closest(".obj").dataset.id;
+  const d = D(); if (!d || !id) return;
+  const sc = scale();
+  for (const [u, list] of Object.entries(d.objects)) {
+    const o = list.find((x) => x.id === id); if (!o) continue;
+    if (o.type === "text" && !o.text.trim()) {
+      // "Dodaj tekst" with nothing typed leaves nothing on the page (and no undo step)
+      d.objects[u] = list.filter((x) => x !== o);
+      if (S.sel === o.id) S.sel = null;
+      const el = $(`.obj[data-id="${o.id}"]`); if (el) el.remove();
+      renderPanel(); renderChrome(); persist();
+    } else if (o.type === "text" || o.type === "fix") { o.h = tx.offsetHeight / sc; persist(); }
+  }
 });
 
 // forms
@@ -1121,6 +1143,7 @@ function appendDocs(infos) {
   const d = D(); commit();
   for (const info of infos) { d.srcInfo[info.id] = info; d.items.push(...itemsFromInfo(info)); }
   renderOrganizer();
+  autoOcr();
   requestAnimationFrame(() => ($("#ogrid").scrollTop = $("#ogrid").scrollHeight));
 }
 function payload(d, items = d.items) {
@@ -1253,21 +1276,6 @@ async function settingsDlg() {
         } else {
           srow(b, "Program za PDF", btn("Postavi kao podrazumevani", async () => { await api("/api/default-app", { body: {} }); watchDefault(); }));
         }
-      }
-
-      const c = sec("Prepoznavanje teksta");
-      if (!s.tessdata) c.insertAdjacentHTML("beforeend", `<span class="muted">Jezici nisu pronađeni.</span>`);
-      else {
-        const chips = document.createElement("div"); chips.className = "chips";
-        const on = new Set(s.ocr_lang.split("+"));
-        const names = { srp: "Srpski ćirilica", srp_latn: "Srpski latinica", eng: "Engleski", hrv: "Hrvatski", deu: "Nemački", fra: "Francuski", ita: "Italijanski" };
-        for (const l of s.langs) {
-          const b = document.createElement("button"); b.className = "chip" + (on.has(l) ? " on" : ""); b.textContent = names[l] || l;
-          b.onclick = async () => { on.has(l) ? on.delete(l) : on.add(l); if (!on.size) on.add(l);
-            s = await api("/api/settings", { body: { ocr_lang: [...on].join("+") } }); draw(); };
-          chips.appendChild(b);
-        }
-        c.appendChild(chips);
       }
 
       const lg = sec("Dnevnik");
@@ -1452,6 +1460,7 @@ async function pollInbox() {
   S.fonts = f.fonts; S.defFont = f.default || "Arial";
   if (!S.fonts.length) setTimeout(async () => { const g = await api("/api/fonts").catch(() => null); if (g) { S.fonts = g.fonts; S.defFont = g.default; } }, 4000);
   await restore();
+  autoOcr();
   const ext = new URLSearchParams(location.search).get("otvori");
   if (ext) history.replaceState(null, "", "/");
   renderAll();
