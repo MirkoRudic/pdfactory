@@ -55,12 +55,19 @@ def _app_exe() -> str:
             log.warning("PDFabrika.exe does not start the venv (rc=%s, %s %s)", r.returncode, prefix, r.stderr[-200:])
             tmp.unlink(missing_ok=True)
             return str(src)
+        old = dst.with_name("PDFabrika.old.exe")
         try:
+            old.unlink(missing_ok=True)
+        except OSError:
+            pass
+        try:
+            if dst.exists():
+                os.replace(dst, old)     # a running .exe can't be overwritten, but it can be renamed
             os.replace(tmp, dst)
-        except PermissionError:      # the running PDFabrika.exe is locked: keep it, new icon on the next start
+        except OSError:
             tmp.unlink(missing_ok=True)
-            log.info("PDFabrika.exe in use, icon updated on next start")
-            return str(dst)
+            log.warning("PDFabrika.exe in use, icon updated on next start")
+            return str(dst) if dst.exists() else str(src)
         ok_flag.write_text(stamp)
         log.info("PDFabrika.exe ready")
         return str(dst)
