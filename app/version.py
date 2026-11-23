@@ -2,7 +2,7 @@
 from pathlib import Path
 
 APP_NAME = "PDFabrika"
-VERSION = "0.1.10"
+VERSION = "0.1.11"
 _GIT = Path(__file__).resolve().parent
 
 

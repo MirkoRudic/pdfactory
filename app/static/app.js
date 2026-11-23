@@ -163,8 +163,7 @@ async function restore() {
 // ---------- chrome: header, tabs, footer ----------
 function renderChrome() {
   const d = D();
-  $("#docName").textContent = d ? (d.dirty ? "● " : "") + d.name : "";
-  document.title = d ? `PDFabrika - ${d.name}` : "PDFabrika";
+  document.title = d ? `PDFabrika - ${d.dirty ? "● " : ""}${d.name}` : "PDFabrika";   // name shown in the window title bar
   $$(".mode").forEach((b) => { b.classList.toggle("on", !!d && b.dataset.mode === S.mode); b.disabled = !d; });
   ["#bSave", "#bSaveMenu", "#bPrint"].forEach((s) => ($(s).disabled = !d));
   $("#bUndo").disabled = !d || !d.hist.length; $("#bRedo").disabled = !d || !d.fut.length;   // undo for every mode

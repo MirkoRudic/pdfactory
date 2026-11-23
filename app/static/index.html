@@ -64,9 +64,11 @@
 </svg>
 
 <header class="top">
-  <div class="brand">
-    <img class="brand-ico" src="/logo.png" alt="">
-    <div class="brand-txt"><strong>PDFabrika</strong><span id="docName"></span></div>
+  <div class="lead">
+    <button id="bOpen"><svg class="icon"><use href="#i-open"/></svg>Otvori</button>
+    <span class="hsep"></span>
+    <button id="bUndo" class="sq" aria-label="Poništi"><svg class="icon"><use href="#i-undo"/></svg></button>
+    <button id="bRedo" class="sq" aria-label="Vrati"><svg class="icon"><use href="#i-redo"/></svg></button>
   </div>
   <nav class="modes" aria-label="Režim">
     <button class="mode" data-mode="read"><svg class="icon"><use href="#i-book"/></svg>Čitanje</button>
@@ -74,10 +76,6 @@
     <button class="mode" data-mode="pages"><svg class="icon"><use href="#i-grid"/></svg>Strane</button>
   </nav>
   <div class="actions">
-    <button id="bUndo" class="sq" aria-label="Poništi"><svg class="icon"><use href="#i-undo"/></svg></button>
-    <button id="bRedo" class="sq" aria-label="Vrati"><svg class="icon"><use href="#i-redo"/></svg></button>
-    <span class="hsep"></span>
-    <button id="bOpen"><svg class="icon"><use href="#i-open"/></svg>Otvori</button>
     <div class="split">
       <button id="bSave" class="primary"><svg class="icon"><use href="#i-save"/></svg>Sačuvaj</button>
       <button id="bSaveMenu" class="primary sq" aria-label="Još načina čuvanja"><svg class="icon"><use href="#i-down"/></svg></button>

@@ -23,7 +23,8 @@ button.primary:hover { filter: brightness(1.08); border-color: var(--accent); }
 /* header */
 .top { height: var(--top); flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 0 16px;
   border-bottom: 1px solid var(--border); background: var(--surface); box-sizing: border-box; }
-.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.lead { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lead > * { flex: none; }
 .brand-ico { width: 30px; height: 30px; flex: none; }
 .logo-big { width: 72px; height: 72px; }
 .brand-txt { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
