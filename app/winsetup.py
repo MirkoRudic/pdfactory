@@ -23,7 +23,15 @@ def pythonw() -> str:
     return str(w if w.exists() else exe)
 
 
+_exe_lock = threading.Lock()
+
+
 def app_exe() -> str:
+    with _exe_lock:        # launcher threads call this at the same time (measured: EndUpdateResource error 110)
+        return _app_exe()
+
+
+def _app_exe() -> str:
     """PDFabrika.exe = copy of the venv's pythonw.exe with our icon. Windows shows the program's
     name and icon from the .exe, so with pythonw.exe it says 'Python' in Default apps and Task Manager.
     Falls back to pythonw.exe when the copy can't be made or doesn't start the venv."""
