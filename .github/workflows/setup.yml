@@ -31,10 +31,6 @@ jobs:
           $pth = Get-ChildItem "$out/python" -Filter "python3*._pth" | Select-Object -First 1
           $tag = $pth.BaseName
           Set-Content $pth.FullName "$tag.zip`r`n.`r`nLib`r`nLib\site-packages`r`nimport site"
-          # tkinter (file dialogs) is not in the embeddable package: take it from the full Python
-          Copy-Item "$base/DLLs/_tkinter.pyd","$base/DLLs/tcl86t.dll","$base/DLLs/tk86t.dll" "$out/python/"
-          Copy-Item "$base/Lib/tkinter" "$out/python/Lib/tkinter" -Recurse
-          Copy-Item "$base/tcl" "$out/python/tcl" -Recurse
           python -m pip install --no-compile --target "$out/python/Lib/site-packages" -r requirements.txt
           # PDFactory.exe: pythonw.exe with our icon and name (Windows shows these in Task Manager, Default apps)
           Invoke-WebRequest "https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe" -OutFile rcedit.exe
@@ -50,7 +46,7 @@ jobs:
         shell: pwsh
         run: |
           $py = "build/PDFactory/python/python.exe"
-          & $py -c "import sys; sys.path.insert(0,'build/PDFactory/app'); import site; site.addsitedir('build/PDFactory/python/Lib/site-packages'); import fitz, fastapi, uvicorn, PIL, pystray, win32print, tkinter; tkinter.Tcl().eval('info patchlevel'); print('ok', fitz.__doc__)"
+          & $py -c "import sys; sys.path.insert(0,'build/PDFactory/app'); import site; site.addsitedir('build/PDFactory/python/Lib/site-packages'); import applog; applog.setup('build/logs','t'); import fitz, fastapi, uvicorn, PIL, pystray, win32print, win32api, winsetup; print('ok', fitz.__doc__)"
       - name: Installer
         shell: pwsh
         run: |

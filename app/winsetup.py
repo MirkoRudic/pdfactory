@@ -380,58 +380,113 @@ def install():
     register()
 
 
-# ---------- file dialogs (Windows standard Open / Save, owned by the app window) ----------
+# ---------- file dialogs (standard Windows Open / Save / folder, owned by the app window) ----------
+# Plain Win32 (comdlg32 / shell32) through ctypes: no tkinter, which the installed build's embedded Python lacks.
 
 _dlg_lock = threading.Lock()
 
 
-def _tk():
-    import tkinter as tk
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
-    try:
-        root.iconbitmap(str(ICON))
-    except Exception:
-        pass
-    return root
+def _owner():
+    """The PDFactory window, so the dialog opens in front of it and is modal to it."""
+    import ctypes
+    from ctypes import wintypes
+    u = ctypes.windll.user32
+    found = []
+
+    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    def each(h, _):
+        if u.IsWindowVisible(h):
+            b = ctypes.create_unicode_buffer(256)
+            u.GetWindowTextW(h, b, 256)
+            if b.value.startswith(NAME):
+                found.append(h)
+        return True
+    u.EnumWindows(each, 0)
+    if found:
+        u.keybd_event(0x12, 0, 0, 0)
+        u.keybd_event(0x12, 0, 2, 0)
+        u.SetForegroundWindow(found[0])
+    return found[0] if found else None
+
+
+def _ofn(title, initial_dir, initial_file, filters, flags, save=False, def_ext=None):
+    import ctypes
+    from ctypes import wintypes
+
+    class OPENFILENAMEW(ctypes.Structure):
+        _fields_ = [("lStructSize", wintypes.DWORD), ("hwndOwner", wintypes.HWND), ("hInstance", wintypes.HINSTANCE),
+                    ("lpstrFilter", wintypes.LPCWSTR), ("lpstrCustomFilter", wintypes.LPWSTR), ("nMaxCustFilter", wintypes.DWORD),
+                    ("nFilterIndex", wintypes.DWORD), ("lpstrFile", ctypes.c_void_p), ("nMaxFile", wintypes.DWORD),
+                    ("lpstrFileTitle", wintypes.LPWSTR), ("nMaxFileTitle", wintypes.DWORD), ("lpstrInitialDir", wintypes.LPCWSTR),
+                    ("lpstrTitle", wintypes.LPCWSTR), ("Flags", wintypes.DWORD), ("nFileOffset", wintypes.WORD),
+                    ("nFileExtension", wintypes.WORD), ("lpstrDefExt", wintypes.LPCWSTR), ("lCustData", wintypes.LPARAM),
+                    ("lpfnHook", ctypes.c_void_p), ("lpTemplateName", wintypes.LPCWSTR), ("pvReserved", ctypes.c_void_p),
+                    ("dwReserved", wintypes.DWORD), ("FlagsEx", wintypes.DWORD)]
+    n = 65536
+    buf = ctypes.create_unicode_buffer(n)
+    if initial_file:
+        buf.value = initial_file
+    o = OPENFILENAMEW()
+    o.lStructSize = ctypes.sizeof(OPENFILENAMEW)
+    o.hwndOwner = _owner()
+    o.lpstrFilter = "".join(f"{a}\0{b}\0" for a, b in filters) + "\0"
+    o.lpstrFile = ctypes.cast(buf, ctypes.c_void_p)
+    o.nMaxFile = n
+    o.lpstrInitialDir = initial_dir
+    o.lpstrTitle = title
+    o.Flags = flags
+    o.lpstrDefExt = def_ext
+    fn = ctypes.windll.comdlg32.GetSaveFileNameW if save else ctypes.windll.comdlg32.GetOpenFileNameW
+    if not fn(ctypes.byref(o)):
+        return None
+    raw = ctypes.wstring_at(ctypes.addressof(buf), n)
+    return raw.split("\0\0", 1)[0].split("\0")
 
 
 def ask_open(initial_dir: str | None = None, multiple=True) -> list[str]:
     with _dlg_lock:
-        from tkinter import filedialog
-        root = _tk()
-        try:
-            res = filedialog.askopenfilenames(
-                parent=root, title="Open", initialdir=initial_dir or str(Path.home() / "Documents"),
-                filetypes=[("PDF and images", "*.pdf *.png *.jpg *.jpeg *.webp *.bmp *.tif *.tiff"), ("All files", "*.*")])
-            return list(res) if multiple else list(res)[:1]
-        finally:
-            root.destroy()
+        OFN_EXPLORER, OFN_FILEMUSTEXIST, OFN_ALLOWMULTISELECT, OFN_HIDEREADONLY = 0x80000, 0x1000, 0x200, 0x4
+        parts = _ofn("Open", initial_dir or str(Path.home() / "Documents"), None,
+                     [("PDF and images", "*.pdf;*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tif;*.tiff"), ("All files", "*.*")],
+                     OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | (OFN_ALLOWMULTISELECT if multiple else 0))
+        if not parts:
+            return []
+        if len(parts) == 1:
+            return parts
+        return [str(Path(parts[0]) / f) for f in parts[1:]]       # folder, then the file names
 
 
 def ask_save(initial: str | None) -> str | None:
     with _dlg_lock:
-        from tkinter import filedialog
-        root = _tk()
-        try:
-            p = Path(initial) if initial else Path.home() / "Documents" / "dokument.pdf"
-            res = filedialog.asksaveasfilename(parent=root, title="Save as", initialdir=str(p.parent),
-                                               initialfile=p.name, defaultextension=".pdf",
-                                               filetypes=[("PDF", "*.pdf")])
-            return res or None
-        finally:
-            root.destroy()
+        OFN_EXPLORER, OFN_OVERWRITEPROMPT, OFN_HIDEREADONLY = 0x80000, 0x2, 0x4
+        p = Path(initial) if initial else Path.home() / "Documents" / "document.pdf"
+        parts = _ofn("Save as", str(p.parent), p.name, [("PDF", "*.pdf")],
+                     OFN_EXPLORER | OFN_OVERWRITEPROMPT | OFN_HIDEREADONLY, save=True, def_ext="pdf")
+        return parts[0] if parts else None
 
 
 def ask_folder(initial: str | None) -> str | None:
     with _dlg_lock:
-        from tkinter import filedialog
-        root = _tk()
-        try:
-            return filedialog.askdirectory(parent=root, title="Choose folder", initialdir=initial) or None
-        finally:
-            root.destroy()
+        import ctypes
+        from ctypes import wintypes
+
+        class BROWSEINFOW(ctypes.Structure):
+            _fields_ = [("hwndOwner", wintypes.HWND), ("pidlRoot", ctypes.c_void_p), ("pszDisplayName", wintypes.LPWSTR),
+                        ("lpszTitle", wintypes.LPCWSTR), ("ulFlags", wintypes.UINT), ("lpfn", ctypes.c_void_p),
+                        ("lParam", wintypes.LPARAM), ("iImage", ctypes.c_int)]
+        ctypes.windll.ole32.CoInitialize(None)
+        name = ctypes.create_unicode_buffer(260)
+        bi = BROWSEINFOW(hwndOwner=_owner(), pszDisplayName=name, lpszTitle="Choose folder", ulFlags=0x0041)  # NEWDIALOGSTYLE | RETURNONLYFSDIRS
+        sh = ctypes.windll.shell32
+        sh.SHBrowseForFolderW.restype = ctypes.c_void_p
+        pidl = sh.SHBrowseForFolderW(ctypes.byref(bi))
+        if not pidl:
+            return None
+        path = ctypes.create_unicode_buffer(1024)
+        sh.SHGetPathFromIDListW.argtypes = [ctypes.c_void_p, wintypes.LPWSTR]
+        ok = sh.SHGetPathFromIDListW(pidl, path)
+        ctypes.windll.ole32.CoTaskMemFree(ctypes.c_void_p(pidl))
+        return path.value if ok else None
 
 
 def show_in_folder(path: str):
