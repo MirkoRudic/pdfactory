@@ -55,13 +55,18 @@ def _app_exe() -> str:
             log.warning("PDFabrika.exe does not start the venv (rc=%s, %s %s)", r.returncode, prefix, r.stderr[-200:])
             tmp.unlink(missing_ok=True)
             return str(src)
-        os.replace(tmp, dst)
+        try:
+            os.replace(tmp, dst)
+        except PermissionError:      # the running PDFabrika.exe is locked: keep it, new icon on the next start
+            tmp.unlink(missing_ok=True)
+            log.info("PDFabrika.exe in use, icon updated on next start")
+            return str(dst)
         ok_flag.write_text(stamp)
         log.info("PDFabrika.exe ready")
         return str(dst)
     except Exception:
         log.exception("PDFabrika.exe not made")
-        return str(src)
+        return str(dst) if dst.exists() else str(src)
 
 
 def _set_exe_icon(exe: Path, ico: Path):
