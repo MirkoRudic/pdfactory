@@ -1229,11 +1229,13 @@ async function settingsDlg() {
       if (s.windows) {
         const b = sec("Windows");
         srow(b, "Pokreće se sa Windows-om", tgl(s.autostart, async () => { s = await api("/api/settings", { body: { autostart: !s.autostart } }); draw(); }));
-        const st = document.createElement("span");
-        st.innerHTML = s.is_default ? `<span class="ok">${icon("check")}</span>` : "";
-        const db = btn(s.is_default ? "Podrazumevani program" : "Postavi kao podrazumevani", async () => { await api("/api/default-app", { body: {} }); });
-        db.disabled = s.is_default;
-        srow(b, "Program za PDF", db);
+        if (s.is_default) {
+          const ok = document.createElement("span"); ok.className = "ok isdef";
+          ok.innerHTML = `${icon("check")}Podrazumevani program`;
+          srow(b, "Program za PDF", ok);
+        } else {
+          srow(b, "Program za PDF", btn("Postavi kao podrazumevani", async () => { await api("/api/default-app", { body: {} }); watchDefault(); }));
+        }
       }
 
       const c = sec("Prepoznavanje teksta");
@@ -1283,8 +1285,19 @@ async function settingsDlg() {
       }));
       v.appendChild(vr);
     };
+    // after "Postavi": Windows Settings is a separate window; watch until PDFabrika is the default (or the dialog closes)
+    const watchDefault = () => {
+      clearInterval(S.defWatch);
+      const t0 = Date.now();
+      S.defWatch = setInterval(async () => {
+        if (!body.isConnected || Date.now() - t0 > 300000) { clearInterval(S.defWatch); return; }
+        const r = await api("/api/default-check").catch(() => null);
+        if (r && r.is_default) { clearInterval(S.defWatch); s = await api("/api/settings"); draw(); bar("def", null); }
+      }, 1500);
+    };
     draw();
   }, [{ label: "Zatvori", value: true, cls: "primary" }]);
+  clearInterval(S.defWatch);
 }
 
 // ---------- bars: update, default program ----------

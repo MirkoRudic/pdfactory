@@ -202,34 +202,72 @@ def register():
     return True
 
 
-def is_default() -> bool:
-    if not WIN:
-        return False
-    import winreg
-    try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                            r"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pdf\UserChoice") as k:
-            return winreg.QueryValueEx(k, "ProgId")[0] == PROGID
-    except OSError:
-        return False
+_FILEEXTS = r"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pdf"
 
 
 def current_default() -> str:
+    """ProgId Windows uses for .pdf. Newer Windows 11 keeps it in UserChoiceLatest, older in UserChoice."""
     if not WIN:
         return ""
     import winreg
-    try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                            r"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pdf\UserChoice") as k:
-            return winreg.QueryValueEx(k, "ProgId")[0]
-    except OSError:
-        return ""
+    for sub in ("UserChoiceLatest", "UserChoice"):
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _FILEEXTS + "\\" + sub) as k:
+                v = winreg.QueryValueEx(k, "ProgId")[0]
+                if v:
+                    return v
+        except OSError:
+            pass
+    return ""
+
+
+def is_default() -> bool:
+    return current_default() == PROGID
+
+
+def _front_settings_window(timeout=8.0):
+    """Settings opened by the background server starts behind the app (Windows foreground lock).
+    Finds its window and brings it to the front (Alt-key trick unlocks SetForegroundWindow)."""
+    import ctypes
+    import time
+    from ctypes import wintypes
+    u = ctypes.windll.user32
+    titles = ("Settings", "Postavke", "Podešavanja", "Postavke sustava", "Einstellungen")
+    end = time.time() + timeout
+    while time.time() < end:
+        found = []
+
+        @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        def each(h, _):
+            if u.IsWindowVisible(h):
+                b = ctypes.create_unicode_buffer(128)
+                u.GetWindowTextW(h, b, 128)
+                c = ctypes.create_unicode_buffer(64)
+                u.GetClassNameW(h, c, 64)
+                if b.value in titles and c.value == "ApplicationFrameWindow":
+                    found.append(h)
+            return True
+        u.EnumWindows(each, 0)
+        if found:
+            h = found[0]
+            u.keybd_event(0x12, 0, 0, 0)        # Alt down
+            u.keybd_event(0x12, 0, 2, 0)        # Alt up
+            if u.IsIconic(h):
+                u.ShowWindow(h, 9)
+            u.SetForegroundWindow(h)
+            u.BringWindowToTop(h)
+            log.info("settings window in front")
+            return True
+        time.sleep(0.25)
+    log.warning("settings window not found")
+    return False
 
 
 def open_default_apps():
-    """Windows lets only the user pick the default program: opens the PDFabrika page in Settings."""
+    """Windows lets only the user pick the default program: opens the PDFabrika page in Settings, in front."""
     register()
     os.startfile("ms-settings:defaultapps?registeredAppUser=PDFabrika")
+    threading.Thread(target=_front_settings_window, name="podesavanja-napred", daemon=True).start()
 
 
 def install():
