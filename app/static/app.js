@@ -1280,6 +1280,14 @@ async function settingsDlg() {
         }
       }
 
+      const sk = sec("Prečice");
+      const keys = [["Ctrl+O", "Otvori"], ["Ctrl+S", "Sačuvaj"], ["Ctrl+Shift+S", "Sačuvaj kao"], ["Ctrl+P", "Štampaj"], ["Ctrl+W", "Zatvori dokument"],
+        ["Ctrl+Z / Ctrl+Y", "Poništi / Vrati"], ["Ctrl+F, F3", "Pretraga, sledeći"], ["Ctrl + / − / 0", "Zum, 100%"],
+        ["Home / End, PgUp / PgDn", "Prva / poslednja, prethodna / sledeća strana"], ["Delete", "Obriši izabrano"], ["Esc", "Odustani, poništi izbor"],
+        ["Ctrl+C / X / V, Ctrl+D", "Kopiraj / iseci / nalepi element, dupliraj"], ["Enter", "Kucaj u izabranom tekstu"], ["Strelice, Shift+strelice", "Pomeri element"]];
+      const kt = document.createElement("div"); kt.className = "keys";
+      kt.innerHTML = keys.map(([a, b]) => `<span class="kk">${esc(a)}</span><span>${esc(b)}</span>`).join("");
+      sk.appendChild(kt);
       const lg = sec("Dnevnik");
       const box = document.createElement("div"); box.className = "log";
       const ctl = document.createElement("div"); ctl.className = "set-row";
@@ -1402,30 +1410,67 @@ $("#qNext").onclick = () => gotoHit(S.hit + 1);
 addEventListener("resize", () => { if (S.fit && D() && S.mode !== "pages") { clearTimeout(S.rt); S.rt = setTimeout(() => setZoom(1, S.fit), 150); } });
 
 addEventListener("keydown", (e) => {
-  const typing = e.target.closest && (e.target.closest(".tx") || /INPUT|TEXTAREA/.test(e.target.tagName));
-  const k = e.key.toLowerCase();
-  if (e.ctrlKey && k === "s") { e.preventDefault(); save(e.shiftKey); return; }
-  if (e.ctrlKey && k === "o") { e.preventDefault(); pickOpen(); return; }
-  if (e.ctrlKey && k === "0") { e.preventDefault(); setZoom(1); return; }
-  if (e.ctrlKey && k === "p") { e.preventDefault(); printDlg(); return; }
-  if (e.ctrlKey && k === "f") { e.preventDefault(); if (S.mode === "pages") setMode("read"); $("#q").focus(); $("#q").select(); return; }
+  const inTx = e.target.closest && e.target.closest(".tx");
+  const typing = inTx || /INPUT|TEXTAREA/.test(e.target.tagName);
+  const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
+  const d = D();
+  if (ctrl && k === "s") { e.preventDefault(); save(e.shiftKey); return; }
+  if (ctrl && k === "o") { e.preventDefault(); pickOpen(); return; }
+  if (ctrl && k === "p") { e.preventDefault(); printDlg(); return; }
+  if (ctrl && k === "f") { e.preventDefault(); if (S.mode === "pages") setMode("read"); $("#q").focus(); $("#q").select(); return; }
+  if (ctrl && k === "w") { e.preventDefault(); if (d) closeDoc(d.key); return; }
+  // zoom (never the browser's own page zoom, it would scale the whole app)
+  if (ctrl && k === "0") { e.preventDefault(); setZoom(1); return; }
+  if (ctrl && (k === "=" || k === "+")) { e.preventDefault(); if (S.mode !== "pages") setZoom(S.zoom * 1.15); return; }
+  if (ctrl && (k === "-" || k === "_")) { e.preventDefault(); if (S.mode !== "pages") setZoom(S.zoom / 1.15); return; }
+  if (e.key === "F3") { e.preventDefault(); gotoHit(S.hit + (e.shiftKey ? -1 : 1)); return; }
   if (document.querySelector(".vd-overlay")) return;
-  if (typing) { if (e.key === "Escape") { e.target.blur(); } return; }
-  if (e.ctrlKey && k === "z") { e.preventDefault(); undo(e.shiftKey); return; }
-  if (e.ctrlKey && k === "y") { e.preventDefault(); undo(true); return; }
-  if (e.ctrlKey && k === "a" && S.mode === "pages") { e.preventDefault(); $("#oAll").click(); return; }
+  if (openMenu.el) { if (e.key === "Escape") closeMenu(); return; }
+  if (typing) {
+    if (e.key === "Escape") { e.target.blur(); if (inTx) select(null); }   // Esc ends typing and lets go of the box
+    return;
+  }
+  if (ctrl && k === "z") { e.preventDefault(); undo(e.shiftKey); return; }
+  if (ctrl && k === "y") { e.preventDefault(); undo(true); return; }
+  if (!d) return;
+  if (S.mode === "pages") {
+    if (ctrl && k === "a") { e.preventDefault(); d.items.forEach((x) => d.osel.add(x.uid)); renderOrganizer(); return; }
+    if (e.key === "Escape") { d.osel.clear(); renderOrganizer(); return; }
+    if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); $("#oDel").click(); return; }
+    return;
+  }
   if (S.mode === "edit") {
     const o = selObj();
     if (o && (e.key === "Delete" || e.key === "Backspace")) { e.preventDefault(); delObj(); return; }
+    if (o && e.key === "Enter" && (o.type === "text" || o.type === "fix")) { e.preventDefault(); focusText(o); return; }
+    if (o && ctrl && k === "d") { e.preventDefault(); dupObj(); return; }
+    if (o && ctrl && (k === "c" || k === "x")) {
+      e.preventDefault(); S.clip = JSON.parse(JSON.stringify(o)); if (k === "x") delObj(); return;
+    }
+    if (ctrl && k === "v" && S.clip) {
+      e.preventDefault();
+      const c = JSON.parse(JSON.stringify(S.clip)); c.id = newUid();
+      if (c.type === "fix") { c.type = "text"; delete c.orig; }
+      const it = d.items[d.curPage || 0];
+      if (o && objUid(o) === it.uid) { c.x = o.x + 12; c.y = o.y + 12; }
+      addObj(it.uid, c); S.clip = JSON.parse(JSON.stringify(c)); return;
+    }
     if (o && e.key.startsWith("Arrow")) {
       e.preventDefault(); if (!e.repeat) commit();
       const st = e.shiftKey ? 10 : 1;
       if (e.key === "ArrowLeft") o.x -= st; if (e.key === "ArrowRight") o.x += st; if (e.key === "ArrowUp") o.y -= st; if (e.key === "ArrowDown") o.y += st;
       refreshObj(o); persist(); return;
     }
-    if (e.key === "Escape") { if (S.sel) select(null); else setTool("select"); }
+    if (e.key === "Escape") { if (S.sel) select(null); else setTool("select"); return; }
   }
-  if (S.mode === "pages" && e.key === "Delete") $("#oDel").click();
+  // moving through the document without clicking into it first
+  const page = d.curPage || 0;
+  if (e.key === "PageDown" || (e.key === "ArrowRight" && !e.shiftKey)) { e.preventDefault(); scrollToPage(Math.min(d.items.length - 1, page + 1)); return; }
+  if (e.key === "PageUp" || (e.key === "ArrowLeft" && !e.shiftKey)) { e.preventDefault(); scrollToPage(Math.max(0, page - 1)); return; }
+  if (e.key === "Home") { e.preventDefault(); scrollToPage(0); return; }
+  if (e.key === "End") { e.preventDefault(); scrollToPage(d.items.length - 1); return; }
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); $("#pages").scrollTop += (e.key === "ArrowDown" ? 60 : -60); return; }
+  if (e.key === "Escape" && S.hits.length) { $("#q").value = ""; S.lastQ = ""; doSearch(); }
 });
 
 // drag & drop files onto the window
