@@ -351,7 +351,8 @@ function scrollToPage(i, offsetPt = 0) {
 }
 function centerX(pg) {     // wider pages make the strip wider than the window: keep the page being read in the middle
   const host = $("#pages");
-  host.scrollLeft = Math.max(0, pg.offsetLeft + pg.offsetWidth / 2 - host.clientWidth / 2);
+  const p = pg.getBoundingClientRect(), h = host.getBoundingClientRect();   // offsetLeft counted from the window, not the strip
+  host.scrollLeft = Math.max(0, host.scrollLeft + (p.left + p.width / 2) - (h.left + host.clientWidth / 2));
 }
 function trackPage() {
   const d = D(); if (!d || S.mode === "pages") return;
