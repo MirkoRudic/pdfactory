@@ -1,5 +1,12 @@
-' PDFabrika - instalacija jednim dvoklikom: paketi, prečica na desktopu, start sa Windows-om, PDF program.
+' PDFabrika - instalacija jednim dvoklikom (prozor sa napretkom: instaliraj.pyw).
 Set sh = CreateObject("WScript.Shell")
-dir = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)
+Set fs = CreateObject("Scripting.FileSystemObject")
+dir = fs.GetParentFolderName(WScript.ScriptFullName)
 sh.CurrentDirectory = dir
-sh.Run "cmd /c """ & dir & "\instaliraj.cmd""", 7, False
+On Error Resume Next
+sh.Run "pyw.exe -3 """ & dir & "\instaliraj.pyw""", 1, False
+If Err.Number <> 0 Then
+  Err.Clear
+  sh.Run "pythonw.exe """ & dir & "\instaliraj.pyw""", 1, False
+  If Err.Number <> 0 Then MsgBox "Python nije pronađen na ovom računaru.", 16, "PDFabrika"
+End If

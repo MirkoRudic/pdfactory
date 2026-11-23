@@ -14,9 +14,12 @@ Port **8802**, folder `D:\VAJB\pdfabrika`, Python u `.venv`.
 - Čuvanje: `compose()` → upis u `ime.pdf.pfsave` → `os.replace`. Stara verzija ide u `data/rezerva` (poslednjih 20).
 - OCR: PyMuPDF ima ugrađen Tesseract, treba mu samo `tessdata` (`pdfabrika/tessdata`: eng iz repoa, srp i srp_latn kopira instalacija iz `kontrolaizbora\podaci\ocr\tessdata`). Dodaje se nevidljiv sloj teksta (render_mode 3), slika strane se ne menja.
 - Štampa: `app/printing.py`, pywin32/GDI, sopstveni prozor u app (bez Windows dijaloga štampe).
-- Windows: `app/winsetup.py` — prečica, Startup prečica (`--tiho`), registracija kao PDF program (HKCU, `PDFabrika.PDF`), otvaranje stranice Podrazumevane aplikacije.
+- Windows: `app/winsetup.py` — prečica, Startup prečica (`--tiho`), registracija kao PDF program (HKCU, `PDFabrika.PDF`), otvaranje stranice Podrazumevane aplikacije. Osvežava se pri svakom pokretanju.
+- `PDFabrika.exe` (u `.venv\Scripts`) = kopija venv `pythonw.exe` sa našom ikonicom (pywin32 resource API). Windows ime i ikonicu programa uzima iz .exe-a; sa pythonw.exe piše „Python“. Ako kopija ne pokrene venv (provera pri pravljenju), koristi se pythonw.exe.
+- Instalacija: `Instaliraj.vbs` → `instaliraj.pyw` (sistemski Python, tkinter prozor sa napretkom, brava protiv duplog pokretanja) → `.venv`, paketi, srp tessdata → `PDFabrika.pyw --instaliraj`.
 
 ## Zamke (izmereno)
+- Prva instalacija bez prozora (cmd umanjen) izgleda kao da ništa ne radi; drugi dvoklik je pokretao drugu instalaciju paralelno i pip je pucao (0.1.0). Zato prozor napretka i brava.
 - OCR na **sivom** pixmap-u (`csGRAY`) vraća prazan tekst; radi samo RGB.
 - `insert_htmlbox` vraća `spare = -1` kad tekst ne staje i tada ništa ne upiše — zato `_text()` probno širi okvir.
 - Isticanje kao highlight anotacija se izobliči na rotiranoj strani; zato je providan pravougaonik (shape).

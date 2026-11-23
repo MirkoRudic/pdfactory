@@ -125,8 +125,8 @@ def taskbar_icon():
         u, sh, ole = ctypes.windll.user32, ctypes.windll.shell32, ctypes.windll.ole32
         ole.CoInitialize(None)
         ico = str(APP_DIR / "assets" / "pdfabrika.ico")
-        pyw = sys.executable if sys.executable.lower().endswith("pythonw.exe") else str(Path(sys.executable).with_name("pythonw.exe"))
-        cmd = f'"{pyw}" "{APP_DIR / "PDFabrika.pyw"}"'
+        import winsetup
+        cmd = f'"{winsetup.app_exe()}" "{APP_DIR / "PDFabrika.pyw"}"'
 
         class GUID(ctypes.Structure):
             _fields_ = [("d1", ctypes.c_ulong), ("d2", ctypes.c_ushort), ("d3", ctypes.c_ushort), ("d4", ctypes.c_ubyte * 8)]
@@ -214,6 +214,19 @@ def stop_old():
     return False
 
 
+def refresh_windows_setup():
+    """Every start: PDF program registration and shortcuts point to the current PDFabrika.exe and icon."""
+    try:
+        import winsetup
+        if winsetup.WIN:
+            winsetup.register()
+            winsetup.desktop_shortcut()
+            if winsetup.autostart_enabled():
+                winsetup.set_autostart(True)
+    except Exception:
+        log.exception("windows setup refresh")
+
+
 def install():
     import tempdir
     import winsetup
@@ -254,6 +267,7 @@ def main():
         return
     if path:
         post("api/open-external", {"path": path})
+    threading.Thread(target=refresh_windows_setup, name="windows-setup", daemon=True).start()
     if "--tiho" not in flags:
         open_window()
     if "--instaliraj" in flags:

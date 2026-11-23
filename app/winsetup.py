@@ -23,6 +23,63 @@ def pythonw() -> str:
     return str(w if w.exists() else exe)
 
 
+def app_exe() -> str:
+    """PDFabrika.exe = copy of the venv's pythonw.exe with our icon. Windows shows the program's
+    name and icon from the .exe, so with pythonw.exe it says 'Python' in Default apps and Task Manager.
+    Falls back to pythonw.exe when the copy can't be made or doesn't start the venv."""
+    if not WIN:
+        return pythonw()
+    src = Path(pythonw())
+    dst = src.with_name("PDFabrika.exe")
+    ok_flag = dst.with_suffix(".ok")
+    try:
+        stamp = f"{src.stat().st_size}:{src.stat().st_mtime_ns}:{ICON.stat().st_mtime_ns}"
+        if dst.exists() and ok_flag.exists() and ok_flag.read_text() == stamp:
+            return str(dst)
+        tmp = dst.with_suffix(".new.exe")
+        import shutil
+        shutil.copy2(src, tmp)
+        _set_exe_icon(tmp, ICON)
+        r = subprocess.run([str(tmp), "-c", "import sys,fitz;print(sys.prefix)"], capture_output=True, text=True,
+                           timeout=60, creationflags=NOWIN)
+        prefix = (r.stdout or "").strip()
+        if r.returncode or Path(prefix).resolve() != src.parents[1].resolve():
+            log.warning("PDFabrika.exe does not start the venv (rc=%s, %s %s)", r.returncode, prefix, r.stderr[-200:])
+            tmp.unlink(missing_ok=True)
+            return str(src)
+        os.replace(tmp, dst)
+        ok_flag.write_text(stamp)
+        log.info("PDFabrika.exe ready")
+        return str(dst)
+    except Exception:
+        log.exception("PDFabrika.exe not made")
+        return str(src)
+
+
+def _set_exe_icon(exe: Path, ico: Path):
+    """Replaces the icon group of an .exe with the icons from an .ico (pywin32 resource API)."""
+    import struct
+    import win32api
+    import win32con
+    data = ico.read_bytes()
+    _, _, count = struct.unpack_from("<HHH", data, 0)
+    entries = [struct.unpack_from("<BBBBHHII", data, 6 + 16 * i) for i in range(count)]
+    mod = win32api.LoadLibraryEx(str(exe), 0, 0x2)  # LOAD_LIBRARY_AS_DATAFILE
+    try:
+        groups = win32api.EnumResourceNames(mod, win32con.RT_GROUP_ICON) or [1]
+        langs = win32api.EnumResourceLanguages(mod, win32con.RT_GROUP_ICON, groups[0]) or [1033]
+    finally:
+        win32api.FreeLibrary(mod)
+    h = win32api.BeginUpdateResource(str(exe), False)
+    grp = struct.pack("<HHH", 0, 1, count)
+    for i, (w, hh, colors, res, planes, bits, size, off) in enumerate(entries):
+        rid = 200 + i
+        win32api.UpdateResource(h, win32con.RT_ICON, rid, data[off:off + size], langs[0])
+        grp += struct.pack("<BBBBHHIH", w, hh, colors, res, planes, bits, size, rid)
+    win32api.UpdateResource(h, win32con.RT_GROUP_ICON, groups[0], grp, langs[0])
+    win32api.EndUpdateResource(h, False)
+
+
 def _ps(script: str) -> bool:
     """Runs a PowerShell script from a file in data/tmp (quotes in -Command get mangled by Windows)."""
     import tempdir
@@ -41,7 +98,7 @@ def _ps(script: str) -> bool:
 def _shortcut(lnk: Path, args: str = ""):
     q = lambda v: str(v).replace("'", "''")        # PowerShell single-quoted strings
     s = (f"$s = (New-Object -ComObject WScript.Shell).CreateShortcut('{q(lnk)}')\n"
-         f"$s.TargetPath = '{q(pythonw())}'\n"
+         f"$s.TargetPath = '{q(app_exe())}'\n"
          f"$s.Arguments = '\"{q(LAUNCHER)}\" {q(args)}'\n"
          f"$s.WorkingDirectory = '{q(APP_DIR)}'\n"
          f"$s.IconLocation = '{q(ICON)},0'\n"
@@ -97,7 +154,8 @@ def register():
     if not WIN:
         return False
     import winreg
-    cmd = f'"{pythonw()}" "{LAUNCHER}" "%1"'
+    exe = app_exe()
+    cmd = f'"{exe}" "{LAUNCHER}" "%1"'
     C = winreg.HKEY_CURRENT_USER
 
     def put(path, name, value):
@@ -107,11 +165,28 @@ def register():
     put(base, "", "PDF dokument")
     put(base + r"\DefaultIcon", "", f"{ICON},0")
     put(base + r"\shell\open\command", "", cmd)
+    put(base + r"\shell\open", "FriendlyAppName", "PDFabrika")
+    put(base + r"\Application", "ApplicationName", "PDFabrika")
+    put(base + r"\Application", "ApplicationIcon", f"{ICON},0")
+    put(base + r"\Application", "ApplicationCompany", "VAJB")
+    # name Windows shows for the program file (otherwise 'Python' from pythonw.exe)
+    mui = r"Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache"
+    for e in {exe, pythonw()}:
+        put(mui, e + ".FriendlyAppName", "PDFabrika")
+        put(mui, e + ".ApplicationCompany", "VAJB")
     put(r"Software\Classes\.pdf\OpenWithProgids", PROGID, "")
-    app = r"Software\Classes\Applications\PDFabrika.pyw"
-    put(app, "FriendlyAppName", "PDFabrika")
-    put(app + r"\shell\open\command", "", cmd)
-    put(app + r"\SupportedTypes", ".pdf", "")
+    if Path(exe).name == "PDFabrika.exe":     # never on pythonw.exe: that key is shared by every Python app
+        app = r"Software\Classes\Applications\PDFabrika.exe"
+        put(app, "FriendlyAppName", "PDFabrika")
+        put(app + r"\shell\open\command", "", cmd)
+        put(app + r"\SupportedTypes", ".pdf", "")
+    for old in (r"Software\Classes\Applications\PDFabrika.pyw\shell\open\command", r"Software\Classes\Applications\PDFabrika.pyw\shell\open",
+                r"Software\Classes\Applications\PDFabrika.pyw\shell", r"Software\Classes\Applications\PDFabrika.pyw\SupportedTypes",
+                r"Software\Classes\Applications\PDFabrika.pyw"):      # 0.1.0 registered the .pyw
+        try:
+            winreg.DeleteKey(C, old)
+        except OSError:
+            pass
     cap = r"Software\PDFabrika\Capabilities"
     put(cap, "ApplicationName", "PDFabrika")
     put(cap, "ApplicationDescription", "Čitanje i izmene PDF fajlova")

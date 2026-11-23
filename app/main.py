@@ -95,6 +95,11 @@ def favicon():
     return FileResponse(APP_DIR / "assets" / "pdfabrika.ico")
 
 
+@app.get("/logo.png")
+def logo():
+    return FileResponse(APP_DIR / "assets" / "pdfabrika_256.png", headers={"Cache-Control": "max-age=3600"})
+
+
 @app.get("/health")
 def health():
     return {"app": "pdfabrika", "version": version.VERSION, "pid": os.getpid()}
