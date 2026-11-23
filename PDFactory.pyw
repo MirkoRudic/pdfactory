@@ -18,6 +18,10 @@ import urllib.request
 from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parent
+_sp = Path(sys.executable).parent / "Lib" / "site-packages"
+if (Path(sys.executable).parent / "python._pth").exists() or any(Path(sys.executable).parent.glob("python3*._pth")):
+    import site                     # installed build (embedded Python): runs pywin32.pth & co.
+    site.addsitedir(str(_sp))
 sys.path.insert(0, str(APP_DIR / "app"))
 DATA = APP_DIR / "data"
 PORT = int(os.environ.get("PDFABRIKA_PORT", "8802"))
@@ -225,7 +229,8 @@ def refresh_windows_setup():
         import winsetup
         if winsetup.WIN:
             winsetup.register()
-            winsetup.desktop_shortcut()
+            if not winsetup.INSTALLED:   # the installer owns the shortcuts of an installed copy
+                winsetup.desktop_shortcut()
             if winsetup.autostart_enabled():
                 winsetup.set_autostart(True)
     except Exception:
@@ -246,6 +251,22 @@ def main():
     path = str(Path(args[0]).resolve()) if args else None
     if "--instaliraj" in flags:
         install()
+    if "--uninstall" in flags:          # called by the uninstaller (Setup.exe)
+        import winsetup
+        try:
+            post("api/shutdown")
+        except Exception:
+            pass
+        winsetup.unregister()
+        return
+    if "--default" in flags:            # Setup.exe task "Set as default PDF app"
+        import tempdir
+        import winsetup
+        tempdir.init(DATA / "tmp")
+        winsetup.register()
+        winsetup.open_default_apps()
+        time.sleep(9)                   # keeps the thread that brings Settings to the front alive
+        return
     h = health()
     if h and "--restart" in flags:
         stop_old()

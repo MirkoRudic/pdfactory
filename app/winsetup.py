@@ -29,7 +29,12 @@ def pythonw() -> str:
 _exe_lock = threading.Lock()
 
 
+INSTALLED = (APP_DIR / "python" / "PDFactory.exe").exists()   # installed by PDFactory-Setup.exe (own Python inside)
+
+
 def app_exe() -> str:
+    if INSTALLED:                  # built with our icon and name at packaging time
+        return str(APP_DIR / "python" / "PDFactory.exe")
     with _exe_lock:        # launcher threads call this at the same time (measured: EndUpdateResource error 110)
         return _app_exe()
 
@@ -321,6 +326,51 @@ def open_default_apps():
     register()
     os.startfile("ms-settings:defaultapps?registeredAppUser=PDFabrika")
     threading.Thread(target=_front_settings_window, name="podesavanja-napred", daemon=True).start()
+
+
+def unregister():
+    """Uninstall: removes what register() and set_autostart() wrote (HKCU only)."""
+    if not WIN:
+        return
+    import winreg
+    C = winreg.HKEY_CURRENT_USER
+
+    def rmtree(path):
+        try:
+            with winreg.OpenKey(C, path) as k:
+                subs = []
+                i = 0
+                while True:
+                    try:
+                        subs.append(winreg.EnumKey(k, i))
+                        i += 1
+                    except OSError:
+                        break
+            for sub in subs:
+                rmtree(path + "\\" + sub)
+            winreg.DeleteKey(C, path)
+        except OSError:
+            pass
+
+    def rmval(path, name):
+        try:
+            with winreg.OpenKey(C, path, 0, winreg.KEY_SET_VALUE) as k:
+                winreg.DeleteValue(k, name)
+        except OSError:
+            pass
+    rmtree(rf"Software\Classes\{PROGID}")
+    rmtree(r"Software\Classes\Applications\PDFactory.exe")
+    rmtree(r"Software\PDFabrika")
+    rmval(r"Software\Classes\.pdf\OpenWithProgids", PROGID)
+    rmval(r"Software\RegisteredApplications", "PDFabrika")
+    for n in ("PDFactory.lnk", "PDFabrika.lnk"):
+        (_startup_dir() / n).unlink(missing_ok=True)
+    try:
+        import ctypes
+        ctypes.windll.shell32.SHChangeNotify(0x08000000, 0, None, None)
+    except Exception:
+        pass
+    log.info("unregistered")
 
 
 def install():

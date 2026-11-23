@@ -47,7 +47,8 @@ Port **8802**, folder `D:\VAJB\pdfabrika`, Python u `.venv`.
 - T1, T3: UI je na engleskom (Mirko, 23.11.2026), brojevi engleski (`1,200.50`). Komentari i CLAUDE.md ostaju kako jesu.
 - Unutrašnja imena ostaju stara: ProgID `PDFabrika.PDF`, ključ `RegisteredApplications\PDFabrika`, health `pdfabrika` (prihvata se i `pdfactory`), localStorage `pdfabrika.*`. Izbor podrazumevanog programa je u Windows-u vezan za ProgID — promena bi ga poništila.
 - Licenca: AGPL 3.0 zbog PyMuPDF (`LICENSE`, Settings → About).
-- Za drugare: zip bez `.git`, `.venv`, `data`, sa srp tessdata; `Install PDFactory.vbs` instalira Python preko winget ako ga nema. Fajl skinut sa interneta: Windows pri dvokliku jednom pita „Open“ (nepotpisan fajl); bez toga samo uz kupljen sertifikat za potpisivanje koda. Bez `.git` nema dugmeta za ažuriranje.
+- Deljenje: `PDFactory-Setup.exe` pravi GitHub Actions (`.github/workflows/setup.yml`, Inno Setup `packaging/setup.iss`) na svaki push: svoj Python (embeddable + tkinter iz punog), `python\PDFactory.exe` sa ikonicom (rcedit), srp tessdata, čarobnjak (folder, prečice, start sa Windows-om, podrazumevani PDF), deinstalacija (`--uninstall` briše registar). Gotov fajl je na grani `dist`. Instalirana kopija nema `.git` (bez ažuriranja iz app); `winsetup.INSTALLED` = postoji `python\PDFactory.exe`.
+- Ranije za drugare: zip bez `.git`, `.venv`, `data`, sa srp tessdata; `Install PDFactory.vbs` instalira Python preko winget ako ga nema. Fajl skinut sa interneta: Windows pri dvokliku jednom pita „Open“ (nepotpisan fajl); bez toga samo uz kupljen sertifikat za potpisivanje koda. Bez `.git` nema dugmeta za ažuriranje.
 - UI4: Otvori / Sačuvaj kao / izbor foldera koriste standardni Windows prozor (tkinter) — potrebna je prava putanja fajla.
 - O1: nema Windows obaveštenja; OCR i štampa pokazuju napredak u prozoru.
 

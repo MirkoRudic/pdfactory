@@ -1,0 +1,77 @@
+# Builds PDFactory-Setup-<version>.exe (own Python inside, no Python needed on the target PC)
+# and publishes it on the "dist" branch (dist/PDFactory-Setup.exe) and as a workflow artifact.
+name: setup
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          architecture: x64
+      - name: App with embedded Python
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $ver = (Select-String -Path app/version.py -Pattern 'VERSION = "([^"]+)"').Matches[0].Groups[1].Value
+          "VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $pyver = python -c "import platform;print(platform.python_version())"
+          $base = python -c "import sys;print(sys.base_prefix)"
+          $out = "build/PDFactory"
+          New-Item -ItemType Directory -Force "$out/python" | Out-Null
+          Invoke-WebRequest "https://www.python.org/ftp/python/$pyver/python-$pyver-embed-amd64.zip" -OutFile py.zip
+          Expand-Archive py.zip -DestinationPath "$out/python"
+          $pth = Get-ChildItem "$out/python" -Filter "python3*._pth" | Select-Object -First 1
+          $tag = $pth.BaseName
+          Set-Content $pth.FullName "$tag.zip`r`n.`r`nLib`r`nLib\site-packages`r`nimport site"
+          # tkinter (file dialogs) is not in the embeddable package: take it from the full Python
+          Copy-Item "$base/DLLs/_tkinter.pyd","$base/DLLs/tcl86t.dll","$base/DLLs/tk86t.dll" "$out/python/"
+          Copy-Item "$base/Lib/tkinter" "$out/python/Lib/tkinter" -Recurse
+          Copy-Item "$base/tcl" "$out/python/tcl" -Recurse
+          python -m pip install --no-compile --target "$out/python/Lib/site-packages" -r requirements.txt
+          # PDFactory.exe: pythonw.exe with our icon and name (Windows shows these in Task Manager, Default apps)
+          Invoke-WebRequest "https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe" -OutFile rcedit.exe
+          Copy-Item "$out/python/pythonw.exe" "$out/python/PDFactory.exe"
+          ./rcedit.exe "$out/python/PDFactory.exe" --set-icon assets/pdfabrika.ico --set-version-string FileDescription PDFactory --set-version-string ProductName PDFactory --set-version-string CompanyName "Mirko Rudić" --set-file-version $ver --set-product-version $ver
+          Copy-Item app,assets,tessdata "$out/" -Recurse
+          Copy-Item PDFactory.pyw,LICENSE,README.md "$out/"
+          foreach ($l in "srp","srp_latn") {
+            Invoke-WebRequest "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/$l.traineddata" -OutFile "$out/tessdata/$l.traineddata"
+          }
+          Get-ChildItem $out -Recurse -Directory -Filter __pycache__ | Remove-Item -Recurse -Force
+      - name: Smoke test (app imports with the embedded Python)
+        shell: pwsh
+        run: |
+          $py = "build/PDFactory/python/python.exe"
+          & $py -c "import sys; sys.path.insert(0,'build/PDFactory/app'); import site; site.addsitedir('build/PDFactory/python/Lib/site-packages'); import fitz, fastapi, uvicorn, PIL, pystray, win32print, tkinter; tkinter.Tcl().eval('info patchlevel'); print('ok', fitz.__doc__)"
+      - name: Installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          & $iscc packaging/setup.iss "/DMyVersion=$env:VERSION"
+          Copy-Item "dist/PDFactory-Setup-$env:VERSION.exe" "dist/PDFactory-Setup.exe"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PDFactory-Setup-${{ env.VERSION }}
+          path: dist/PDFactory-Setup-${{ env.VERSION }}.exe
+      - name: Publish on branch dist
+        shell: pwsh
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          New-Item -ItemType Directory -Force publish | Out-Null
+          Copy-Item "dist/PDFactory-Setup-$env:VERSION.exe" publish/
+          Copy-Item dist/PDFactory-Setup.exe publish/
+          Set-Location publish
+          git init -q -b dist
+          git add .
+          git commit -q -m "PDFactory-Setup $env:VERSION"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" dist
