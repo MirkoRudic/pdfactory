@@ -1,6 +1,6 @@
 # PDFactory
 
-Read and edit PDF files locally on Windows. Setup: double-click `Instaliraj.vbs` (installs Python if needed, packages,
+Read and edit PDF files locally on Windows. Setup: double-click `Install PDFactory.vbs` (installs Python if needed, packages,
 desktop shortcut, start with Windows, PDF app). At the end Windows opens the page where PDFactory can be chosen as the
 default app for .pdf files.
 

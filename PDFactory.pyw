@@ -4,7 +4,7 @@
     PDFactory.pyw "C:\\x.pdf"     opens a file (double click on a PDF when PDFactory is the default app)
     PDFactory.pyw --tiho          start with Windows: server + tray icon, no window
     PDFactory.pyw --restart       after an update: stops the old server and starts the new code
-    PDFactory.pyw --instaliraj    desktop shortcut, start with Windows, PDF app (called by Instaliraj.vbs)
+    PDFactory.pyw --instaliraj    desktop shortcut, start with Windows, PDF app (called by "Install PDFactory.vbs")
 """
 import json
 import os

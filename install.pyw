@@ -1,8 +1,8 @@
-"""PDFactory - setup with a progress window (Instaliraj.vbs starts it with the system Python).
+"""PDFactory - setup with a progress window ("Install PDFactory.vbs" starts it with the system Python).
 
 Steps: .venv -> packages -> Serbian OCR languages -> PDFactory.pyw --instaliraj (shortcut, start with Windows,
 PDF app) and the app opens. A second double click while setup runs only brings this window to the front.
-Output of every step goes to data/logs/instalacija.log (appended).
+Output of every step goes to data/logs/install.log (appended).
 """
 import os
 import shutil
@@ -17,8 +17,8 @@ from tkinter import ttk
 APP = Path(__file__).resolve().parent
 LOGS = APP / "data" / "logs"
 LOGS.mkdir(parents=True, exist_ok=True)
-LOG = LOGS / "instalacija.log"
-LOCK = APP / "data" / "instalacija.lock"
+LOG = LOGS / "install.log"
+LOCK = APP / "data" / "install.lock"
 VENV = APP / ".venv"
 PY = VENV / "Scripts" / "python.exe"
 PYW = VENV / "Scripts" / "pythonw.exe"
