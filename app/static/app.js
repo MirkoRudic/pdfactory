@@ -1313,11 +1313,16 @@ async function settingsDlg() {
       const v = sec("Verzija");
       const vr = document.createElement("div"); vr.className = "set-row";
       vr.innerHTML = `<span>${esc(s.version)}</span>`;
-      vr.appendChild(btn(icon("refresh") + "Proveri", async (e) => {
+      vr.appendChild(btn(icon("refresh") + "Proveri i ažuriraj", async (e) => {
         const r = await api("/api/update").catch(() => ({ ok: false }));
         const nova = r.ok && (r.behind || r.restart);
-        e.target.closest("button").outerHTML = r.ok ? (nova ? `<span class="ok">Nova verzija ${esc(r.version || "")}</span>` : '<span class="muted">Najnovija verzija</span>') : '<span class="muted">Provera nije uspela</span>';
-        if (nova) showUpdate(r);
+        const el = e.target.closest("button");
+        if (nova) {                             // one click: check, download and restart
+          el.outerHTML = `<span class="ok">Ažuriranje na ${esc(r.version || "novu verziju")}…</span>`;
+          if (!(await doUpdate(r))) draw();
+          return;
+        }
+        el.outerHTML = r.ok ? '<span class="muted">Najnovija verzija</span>' : '<span class="muted">Provera nije uspela</span>';
       }));
       v.appendChild(vr);
     };
@@ -1345,12 +1350,17 @@ function bar(id, html, cls = "") {
 }
 function showUpdate(r) {
   const b = bar("upd", `${icon("refresh")}<span>Nova verzija ${esc(r.version || "")}</span><button class="primary">Ažuriraj</button>`);
-  $("button", b).onclick = async () => {
-    if (S.docs.some((d) => d.dirty) && !(await vd.confirm("Ima nesačuvanih izmena. Ažurirati sada?", { ok: "Ažuriraj" }))) return;
-    persist();
-    const p = await safe(() => api("/api/update", { body: {} }));
-    if (p && p.ok) { bar("upd", `${icon("refresh")}<span>Ažuriranje…</span>`); setTimeout(waitRestart, 1500); }
-  };
+  $("button", b).onclick = () => doUpdate(r);
+}
+async function doUpdate(r) {
+  if (S.docs.some((d) => d.dirty) && !(await vd.confirm("Ima nesačuvanih izmena. Ažurirati sada?", { ok: "Ažuriraj" }))) return false;
+  persist();                                   // open files and edits come back after the restart
+  try { localStorage.setItem("pdfabrika.upd", r.version || ""); } catch (e) { /* no storage */ }
+  bar("upd", `${icon("refresh")}<span>Ažuriranje na ${esc(r.version || "novu verziju")}…</span>`);
+  const p = await safe(() => api("/api/update", { body: {} }));
+  if (p && p.ok) { setTimeout(waitRestart, 1500); return true; }
+  bar("upd", null);
+  return false;
 }
 async function waitRestart() {
   for (let i = 0; i < 60; i++) {
@@ -1508,6 +1518,10 @@ async function pollInbox() {
   if (!S.fonts.length) setTimeout(async () => { const g = await api("/api/fonts").catch(() => null); if (g) { S.fonts = g.fonts; S.defFont = g.default; } }, 4000);
   await restore();
   autoOcr();
+  try {
+    const v = localStorage.getItem("pdfabrika.upd");
+    if (v !== null) { localStorage.removeItem("pdfabrika.upd"); toast(`Ažurirano: ${h.version}`); }
+  } catch (e) { /* no storage */ }
   const ext = new URLSearchParams(location.search).get("otvori");
   if (ext) history.replaceState(null, "", "/");
   renderAll();
