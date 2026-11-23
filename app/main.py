@@ -77,6 +77,7 @@ def index():
     html = (APP / "static" / "index.html").read_text(encoding="utf-8")
     for f in ("base.css", "app.css", "dialog.js", "app.js"):          # UI11
         html = html.replace(f'"{f}"', f'"/static/{f}?v={_hash(APP / "static" / f)}"')
+    html = html.replace('"/logo.png"', f'"/logo.png?v={_hash(APP_DIR / "assets" / "pdfabrika_256.png")}"')   # UI11
     s = settings.load()
     html = html.replace('data-theme="dark"', f'data-theme="{s.get("theme", "dark")}"')
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
