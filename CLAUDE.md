@@ -32,6 +32,9 @@ Port **8802**, folder `D:\VAJB\pdfabrika`, Python u `.venv`.
 - `.page` ima `overflow: clip`: sa `hidden` fokus u širokom tekst-okviru skroluje stranu bočno (sadržaj strane se pomeri ulevo).
 - Uklopi širinu računa po strani koja se čita, ne po najširoj (jedna široka strana je smanjivala sve).
 
+- „Proveri“ je gledao samo git (lokalno vs GitHub). Kad je kod na disku noviji od pokrenutog servera (kopiran ili povučen dok app radi), pisalo je „Najnovija verzija“ uz staru verziju. Sada `/api/update` poredi i verziju sa diska sa pokrenutom (`restart`), a Ažuriraj tada samo restartuje.
+- Nove verzije na laptop idu kroz `git push` + Ažuriraj u app (Windows git ima pristup privatnom repou), ne kopiranjem fajlova.
+
 ## Izuzeci od pravila
 - UI4: Otvori / Sačuvaj kao / izbor foldera koriste standardni Windows prozor (tkinter) — potrebna je prava putanja fajla.
 - O1: nema Windows obaveštenja; OCR i štampa pokazuju napredak u prozoru.

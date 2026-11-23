@@ -1285,8 +1285,9 @@ async function settingsDlg() {
       vr.innerHTML = `<span>${esc(s.version)}</span>`;
       vr.appendChild(btn(icon("refresh") + "Proveri", async (e) => {
         const r = await api("/api/update").catch(() => ({ ok: false }));
-        e.target.closest("button").outerHTML = r.ok ? (r.behind ? "" : '<span class="muted">Najnovija verzija</span>') : '<span class="muted">Provera nije uspela</span>';
-        if (r.ok && r.behind) showUpdate(r);
+        const nova = r.ok && (r.behind || r.restart);
+        e.target.closest("button").outerHTML = r.ok ? (nova ? `<span class="ok">Nova verzija ${esc(r.version || "")}</span>` : '<span class="muted">Najnovija verzija</span>') : '<span class="muted">Provera nije uspela</span>';
+        if (nova) showUpdate(r);
       }));
       v.appendChild(vr);
     };
@@ -1442,6 +1443,6 @@ async function pollInbox() {
   pollInbox();
   checkDefault();
   const u = await api("/api/update").catch(() => null);
-  if (u && u.ok && u.behind) showUpdate(u);
-  setInterval(async () => { const r = await api("/api/update").catch(() => null); if (r && r.ok && r.behind) showUpdate(r); }, 3600 * 1000);
+  if (u && u.ok && (u.behind || u.restart)) showUpdate(u);
+  setInterval(async () => { const r = await api("/api/update").catch(() => null); if (r && r.ok && (r.behind || r.restart)) showUpdate(r); }, 3600 * 1000);
 })();

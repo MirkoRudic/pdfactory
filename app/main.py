@@ -467,19 +467,34 @@ def delete_log(body: dict = Body(...)):
     return {"deleted": n, "mb": applog.size_mb()}
 
 
+def _disk_version() -> str:
+    import re
+    m = re.search(r'VERSION\s*=\s*"([^"]+)"', (APP / "version.py").read_text(encoding="utf-8"))
+    return m.group(1) if m else ""
+
+
 @app.get("/api/update")
 def update_check():
     try:
-        return update.check()
+        r = update.check()
     except Exception as e:
         log.warning("update check: %s", e)
-        return {"ok": False}
+        r = {"ok": False}
+    # code on disk can be newer than the running server (pulled or copied while it ran): that also needs a restart
+    disk = _disk_version()
+    r["running"] = version.VERSION
+    r["restart"] = bool(disk) and disk != version.VERSION
+    if r["restart"]:
+        r["ok"] = True
+        if not r.get("behind"):
+            r["version"] = disk
+    return r
 
 
 @app.post("/api/update")
 def update_pull():
     r = update.pull()
-    if r.get("ok") and r.get("changed"):
+    if r.get("ok") and (r.get("changed") or _disk_version() != version.VERSION):
         threading.Timer(0.5, update.restart).start()
     return r
 
