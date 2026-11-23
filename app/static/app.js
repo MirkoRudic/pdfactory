@@ -1374,6 +1374,7 @@ $("#bUndo").onclick = () => undo(); $("#bRedo").onclick = () => undo(true);
 $("#bSettings").onclick = settingsDlg;
 $("#bQuit").onclick = quit;
 $("#zIn").onclick = () => setZoom(S.zoom * 1.15);
+$("#z100").onclick = () => setZoom(1);
 $("#zOut").onclick = () => setZoom(S.zoom / 1.15);
 $("#zVal").onclick = () => openMenu($("#zVal"), [
   { label: "Automatski", on: S.fit === "auto", fn: () => setZoom(1, "auto") },
@@ -1395,6 +1396,7 @@ addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   if (e.ctrlKey && k === "s") { e.preventDefault(); save(e.shiftKey); return; }
   if (e.ctrlKey && k === "o") { e.preventDefault(); pickOpen(); return; }
+  if (e.ctrlKey && k === "0") { e.preventDefault(); setZoom(1); return; }
   if (e.ctrlKey && k === "p") { e.preventDefault(); printDlg(); return; }
   if (e.ctrlKey && k === "f") { e.preventDefault(); if (S.mode === "pages") setMode("read"); $("#q").focus(); $("#q").select(); return; }
   if (document.querySelector(".vd-overlay")) return;
