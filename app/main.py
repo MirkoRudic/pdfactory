@@ -1,4 +1,4 @@
-"""PDFabrika web server (127.0.0.1 only, P2)."""
+"""PDFactory web server (127.0.0.1 only, P2)."""
 import hashlib
 import os
 import sys
@@ -40,13 +40,13 @@ DEFAULTS = {
 }
 settings.init(DATA / "settings.json", DEFAULTS)
 tempdir.init(DATA / "tmp")
-update.init(APP_DIR, version_file="app/version.py", launcher="PDFabrika.pyw")
+update.init(APP_DIR, version_file="app/version.py", launcher="PDFactory.pyw")
 applog.auto_trim(settings.load().get("log_auto_trim_mb", 500))
 threading.Thread(target=lambda: fonts.init(DATA / "fonts.json"), name="fontovi", daemon=True).start()
 
 app = FastAPI()
 app.state.quit = None
-ASK_QUIT = False               # tray menu "Ugasi": the window asks for confirmation (P4)
+ASK_QUIT = False               # tray menu "Quit": the window asks for confirmation (P4)
 INBOX: list[dict] = []          # files opened from outside (double click on a PDF) waiting for the window
 _inbox_lock = threading.Lock()
 
@@ -63,7 +63,7 @@ async def _user_error(_req: Request, e: pdfops.UserError):
 @app.exception_handler(Exception)
 async def _any_error(req: Request, e: Exception):
     log.error("%s %s", req.method, req.url.path, exc_info=e)
-    return err("Nešto nije u redu. Detalji su u dnevniku.", 500)
+    return err("Something went wrong. Details are in the log.", 500)
 
 
 # ---------- page ----------
@@ -208,7 +208,9 @@ def fix_text(src_id: str, n: int, x0: float, y0: float, x1: float, y1: float, te
     if not td:
         return {"text": text, "source": "pdf"}
     have = set(pdfops.tess_langs(td))
-    lang = "+".join(l for l in ("srp_latn", "srp", "eng") if l in have) or settings.load()["ocr_lang"]
+    # one script per line: with srp_latn+srp together Tesseract mixes alphabets ("Rok" read as Cyrillic "Рок")
+    cyr = any("\u0400" <= c <= "\u04ff" for c in text)
+    lang = "+".join(l for l in (("srp" if cyr else "srp_latn"), "eng") if l in have) or "eng"
     try:
         ocr = pdfops.ocr_rect(src_id, n, (x0, y0, x1, y1), lang, td)
     except Exception:
@@ -246,7 +248,7 @@ async def image(file: UploadFile = File(...)):
         im = Image.open(io.BytesIO(data))
         w, h = im.size
     except Exception:
-        return err("Ovo nije slika koju mogu da otvorim.")
+        return err("This image can't be opened.")
     iid = uuid.uuid4().hex[:10]
     pdfops.IMAGES[iid] = data
     return {"id": iid, "w": w, "h": h}
@@ -357,7 +359,7 @@ def ocr_info():
 def ocr(src_id: str, body: dict = Body(default={})):
     td = _tessdata()
     if not td:
-        return err("Nisu pronađeni jezici za prepoznavanje teksta (tessdata).")
+        return err("Text recognition languages not found (tessdata).")
     have = pdfops.tess_langs(td)
     # no language choice for the user: Serbian (both scripts) and English, whatever is installed
     lang = "+".join(l for l in ("srp_latn", "srp", "eng") if l in have) or "+".join(have[:3])
@@ -387,12 +389,12 @@ def printers():
 @app.post("/api/print")
 def do_print(body: dict = Body(...)):
     if not printing.available():
-        return err("Štampa radi samo na Windows-u sa instaliranim pywin32.")
+        return err("Printing works only on Windows with pywin32.")
     o = body.get("options", {})
     doc = _compose(body)
     pages = pdfops.parse_ranges(o.get("pages", ""), doc.page_count)
     if not pages:
-        return err("Nijedna strana nije izabrana.")
+        return err("No pages selected.")
     if len(pages) != doc.page_count:
         doc.select(pages)
     doc = pdfops.n_up(doc, int(o.get("perSheet", 1)))
@@ -400,7 +402,7 @@ def do_print(body: dict = Body(...)):
     s["last_printer"] = o.get("printer", "")
     settings.save(s)
     job = uuid.uuid4().hex[:8]
-    o["title"] = body.get("name", "PDFabrika")
+    o["title"] = body.get("name", "PDFactory")
     printing.start(job, doc, o)
     log.info("print job %s: %d sheets on %s", job, doc.page_count, o.get("printer"))
     return {"job": job}
@@ -420,7 +422,7 @@ def get_settings():
     return {"theme": s["theme"], "ocr_lang": s["ocr_lang"], "tessdata": td, "langs": pdfops.tess_langs(td),
             "version": version.label(), "log_mb": applog.size_mb(),
             "autostart": winsetup.autostart_enabled(), "is_default": winsetup.is_default(),
-            "windows": winsetup.WIN}
+            "windows": winsetup.WIN, "git": (APP_DIR / ".git").exists()}
 
 
 @app.post("/api/settings")
@@ -437,12 +439,12 @@ def set_settings(body: dict = Body(...)):
 
 @app.get("/api/default-check")
 def default_check():
-    """Was PDFabrika the default PDF program and something (e.g. an Adobe update) took it over? (F3)"""
+    """Was PDFactory the default PDF program and something (e.g. an Adobe update) took it over? (F3)"""
     s = settings.load()
     now = winsetup.is_default()
     lost = s.get("was_default") and not now
     if lost:
-        log.warning("PDFabrika is no longer the default PDF program (now: %s)", winsetup.current_default())
+        log.warning("PDFactory is no longer the default PDF program (now: %s)", winsetup.current_default())
     if now != s.get("was_default"):
         s["was_default"] = now
         settings.save(s)

@@ -1,5 +1,7 @@
-# PDFabrika
+# PDFactory
 
-Čitanje i izmene PDF fajlova, lokalno. Instalacija: dvoklik na `Instaliraj.vbs` (paketi, prečica na desktopu, start sa Windows-om, PDF program). Na kraju se otvori Windows stranica gde se PDFabrika izabere kao podrazumevani program za .pdf.
+Read and edit PDF files locally on Windows. Setup: double-click `Instaliraj.vbs` (installs Python if needed, packages,
+desktop shortcut, start with Windows, PDF app). At the end Windows opens the page where PDFactory can be chosen as the
+default app for .pdf files.
 
-Tehnički opis: `CLAUDE.md`.
+License: GNU AGPL 3.0 (see `LICENSE`). Technical notes: `CLAUDE.md`.

@@ -1,4 +1,4 @@
-// PDFabrika - UI. Plain JS, no build step.
+// PDFactory - UI. Plain JS, no build step.
 // Coordinates of objects are display points of the page (rotation applied, origin top-left, 1 = 1 pt).
 "use strict";
 const $ = (s, el = document) => el.querySelector(s);
@@ -26,8 +26,8 @@ const D = () => S.docs.find((d) => d.key === S.cur) || null;
 // ---------- formatting (T2) ----------
 function formatNumber(n, dec = 0) {
   const s = Math.abs(n).toFixed(dec).split(".");
-  s[0] = s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return (n < 0 ? "-" : "") + s.join(",");
+  s[0] = s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return (n < 0 ? "-" : "") + s.join(".");
 }
 function formatPercent(p) { return Math.round(p * 100) + "%"; }
 function formatMm(pt) { return formatNumber(pt / 72 * 25.4, 0) + " mm"; }
@@ -42,9 +42,9 @@ async function api(path, opt = {}) {
   if (opt.form) o.body = opt.form;
   else if (opt.body !== undefined) { o.body = JSON.stringify(opt.body); o.headers["Content-Type"] = "application/json"; }
   let r;
-  try { r = await fetch(path, o); } catch (e) { throw new Error("PDFabrika ne odgovara. Pokreni je ponovo."); }
+  try { r = await fetch(path, o); } catch (e) { throw new Error("PDFactory is not responding. Start it again."); }
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || "Nešto nije u redu.");
+  if (!r.ok) throw new Error(j.error || "Something went wrong.");
   return j;
 }
 async function safe(fn) {
@@ -108,7 +108,7 @@ async function uploadFiles(files) {
 }
 async function closeDoc(key) {
   const d = S.docs.find((x) => x.key === key); if (!d) return;
-  if (d.dirty && !(await vd.confirm(`„${d.name}“ ima nesačuvane izmene. Zatvoriti bez čuvanja?`, { ok: "Zatvori", danger: true }))) return;
+  if (d.dirty && !(await vd.confirm(`“${d.name}” has unsaved changes. Close without saving?`, { ok: "Close", danger: true }))) return;
   const used = new Set(S.docs.filter((x) => x !== d).flatMap((x) => x.items.map((i) => i.src)));
   for (const s of new Set(d.items.map((i) => i.src))) if (!used.has(s)) api("/api/close/" + s, { body: {} }).catch(() => {});
   S.docs = S.docs.filter((x) => x !== d);
@@ -165,7 +165,7 @@ async function restore() {
 // ---------- chrome: header, tabs, footer ----------
 function renderChrome() {
   const d = D();
-  document.title = d ? `PDFabrika - ${d.dirty ? "● " : ""}${d.name}` : "PDFabrika";   // name shown in the window title bar
+  document.title = d ? `PDFactory - ${d.dirty ? "● " : ""}${d.name}` : "PDFactory";   // name shown in the window title bar
   $$(".mode").forEach((b) => { b.classList.toggle("on", !!d && b.dataset.mode === S.mode); b.disabled = !d; });
   ["#bSave", "#bSaveMenu", "#bPrint"].forEach((s) => ($(s).disabled = !d));
   $("#bUndo").disabled = !d || !d.hist.length; $("#bRedo").disabled = !d || !d.fut.length;   // undo for every mode
@@ -175,7 +175,7 @@ function renderChrome() {
   for (const x of S.docs) {
     const b = document.createElement("button");
     b.className = "tab" + (x.key === S.cur ? " on" : "");
-    b.innerHTML = (x.dirty ? '<i class="dot"></i>' : "") + `<span>${esc(x.name)}</span><button class="x" aria-label="Zatvori">${icon("x")}</button>`;
+    b.innerHTML = (x.dirty ? '<i class="dot"></i>' : "") + `<span>${esc(x.name)}</span><button class="x" aria-label="Close">${icon("x")}</button>`;
     b.onclick = (e) => { if (e.target.closest(".x")) closeDoc(x.key); else if (x.key !== S.cur) switchDoc(x.key); };
     tabs.appendChild(b);
   }
@@ -184,8 +184,8 @@ function renderChrome() {
 function renderFooter() {
   const d = D();
   if (!d) { $("#fLeft").textContent = ""; $("#fMid").textContent = ""; return; }
-  if (S.mode === "pages") $("#fLeft").textContent = `${formatNumber(d.items.length)} strana · izabrano ${formatNumber(d.osel.size)}`;
-  else $("#fLeft").textContent = `Strana ${formatNumber((d.curPage || 0) + 1)} od ${formatNumber(d.items.length)}`;
+  if (S.mode === "pages") $("#fLeft").textContent = `${formatNumber(d.items.length)} pages · ${formatNumber(d.osel.size)} selected`;
+  else $("#fLeft").textContent = `Page ${formatNumber((d.curPage || 0) + 1)} of ${formatNumber(d.items.length)}`;
   $("#zVal").textContent = formatPercent(S.zoom);
   $$(".bottom .fright button").forEach((b) => (b.disabled = S.mode === "pages"));
 }
@@ -214,7 +214,7 @@ function renderAll() {
 async function renderStart() {
   const r = await api("/api/recent").catch(() => ({ recent: [] }));
   const box = $("#recent");
-  box.innerHTML = r.recent.length ? "<h3>Nedavno</h3>" : "";
+  box.innerHTML = r.recent.length ? "<h3>Recent</h3>" : "";
   for (const x of r.recent.slice(0, 8)) {
     const b = document.createElement("button");
     b.innerHTML = `<span>${esc(x.name)}</span><span class="rp">${esc(x.path)}</span>`;
@@ -428,7 +428,7 @@ async function autoOcr() {
       for (;;) {
         await new Promise((res) => setTimeout(res, 800));
         const st = await api(`/api/ocr/${src}/status`).catch(() => ({ state: "greška" }));
-        $("#fMid").textContent = st.state === "radi" ? `Prepoznavanje teksta ${formatPercent(st.total ? st.done / st.total : 0)}` : "";
+        $("#fMid").textContent = st.state === "radi" ? `Recognizing text ${formatPercent(st.total ? st.done / st.total : 0)}` : "";
         if (st.state !== "radi") break;
       }
       const info = await api("/api/src/" + src).catch(() => null);
@@ -453,8 +453,8 @@ function showProgress(text) {
 
 // ---------- edit: panel ----------
 const TOOLS = [
-  ["select", "pointer", "Izaberi i pomeri"], ["text", "text", "Dodaj tekst"], ["fix", "cursor", "Ispravi tekst"],
-  ["mark", "mark", "Istakni"], ["shape", "shapes", "Oblik"], ["image", "photo", "Slika"], ["form", "form", "Popuni formular"],
+  ["select", "pointer", "Select and move"], ["text", "text", "Add text"], ["fix", "cursor", "Edit text"],
+  ["mark", "mark", "Highlight"], ["shape", "shapes", "Shape"], ["image", "photo", "Image"], ["form", "form", "Fill form"],
 ];
 function setTool(t) {
   if (t === "image") { $("#fileImg").click(); return; }
@@ -487,8 +487,8 @@ function renderPanel() {
   if (o) {
     P.appendChild(sep());
     const r = row(2);
-    r.appendChild(btn(icon("copy") + "Dupliraj", () => dupObj(), "txt"));
-    r.appendChild(btn(icon("trash") + "Obriši", () => delObj(), "txt"));
+    r.appendChild(btn(icon("copy") + "Duplicate", () => dupObj(), "txt"));
+    r.appendChild(btn(icon("trash") + "Delete", () => delObj(), "txt"));
     P.appendChild(r);
   }
 }
@@ -518,10 +518,10 @@ function propsText(box, t) {
   for (const [k, txt, st] of [["bold", "B", "font-weight:700"], ["italic", "I", "font-style:italic;font-family:Georgia,serif"],
     ["underline", "U", "text-decoration:underline"], ["strike", "S", "text-decoration:line-through"]]) {
     const b = btn(`<span style="${st}">${txt}</span>`, () => setProp(t, k, !t[k], "text"), t[k] ? "on" : "",
-      { bold: "Podebljano", italic: "Kurziv", underline: "Podvučeno", strike: "Precrtano" }[k]);
+      { bold: "Bold", italic: "Italic", underline: "Underline", strike: "Strikethrough" }[k]);
     r2.appendChild(b);
   }
-  for (const [a, ic, lab] of [["left", "al-left", "Levo"], ["center", "al-center", "Centar"], ["right", "al-right", "Desno"], ["justify", "al-just", "Poravnato"]])
+  for (const [a, ic, lab] of [["left", "al-left", "Left"], ["center", "al-center", "Center"], ["right", "al-right", "Right"], ["justify", "al-just", "Justify"]])
     r2.appendChild(btn(icon(ic), () => setProp(t, "align", a, "text"), t.align === a ? "on" : "", lab));
   box.appendChild(r2);
   box.appendChild(colorPick(COLORS, t.color, (c) => setProp(t, "color", c, "text")));
@@ -529,58 +529,58 @@ function propsText(box, t) {
 function propsShape(box, s, chooseKind) {
   if (chooseKind || selObj()) {
     const r = row(4); const cur = selObj() ? selObj().kind : S.shapeKind;
-    for (const [k, ic, lab] of [["rect", "square", "Pravougaonik"], ["ellipse", "circle", "Elipsa"], ["line", "line", "Linija"], ["arrow", "arrow", "Strelica"]])
+    for (const [k, ic, lab] of [["rect", "square", "Rectangle"], ["ellipse", "circle", "Ellipse"], ["line", "line", "Line"], ["arrow", "arrow", "Arrow"]])
       r.appendChild(btn(icon(ic), () => { if (selObj()) setProp(s, "kind", k); else { S.shapeKind = k; renderPanel(); } }, cur === k ? "on" : "", lab));
     box.appendChild(r);
   }
-  box.appendChild(lbl("Linija"));
+  box.appendChild(lbl("Line"));
   box.appendChild(colorPick(COLORS, s.stroke, (c) => setProp(s, "stroke", c, "shape"), true));
   const k = selObj() ? selObj().kind : S.shapeKind;
   if (k === "rect" || k === "ellipse") {
-    box.appendChild(lbl("Popuna"));
+    box.appendChild(lbl("Fill"));
     box.appendChild(colorPick(COLORS, s.fill, (c) => setProp(s, "fill", c, "shape"), true));
   }
-  box.appendChild(lbl("Debljina"));
+  box.appendChild(lbl("Width"));
   box.appendChild(stepper(s.width, 0.5, 40, 0.5, (v) => setProp(s, "width", v, "shape"), " pt", 1));
-  box.appendChild(lbl("Providnost", formatPercent(s.opacity)));
+  box.appendChild(lbl("Opacity", formatPercent(s.opacity)));
   box.appendChild(slider(s.opacity, 0.05, 1, (v) => setProp(s, "opacity", v, "shape")));
 }
 function propsMark(box, m) {
-  box.appendChild(lbl("Boja"));
+  box.appendChild(lbl("Color"));
   box.appendChild(colorPick(MARKS, m.color, (c) => setProp(m, "color", c, "mark")));
 }
 function propsImage(box, o) {
   const r = row(2);
   const keep = () => o.keep !== false;
-  r.appendChild(numField("Širina", o.w / 72 * 25.4, (mm) => { commit(); const nw = mm / 25.4 * 72; if (keep()) o.h *= nw / o.w; o.w = nw; refreshObj(o); renderPanel(); }));
-  r.appendChild(numField("Visina", o.h / 72 * 25.4, (mm) => { commit(); const nh = mm / 25.4 * 72; if (keep()) o.w *= nh / o.h; o.h = nh; refreshObj(o); renderPanel(); }));
+  r.appendChild(numField("Width", o.w / 72 * 25.4, (mm) => { commit(); const nw = mm / 25.4 * 72; if (keep()) o.h *= nw / o.w; o.w = nw; refreshObj(o); renderPanel(); }));
+  r.appendChild(numField("Height", o.h / 72 * 25.4, (mm) => { commit(); const nh = mm / 25.4 * 72; if (keep()) o.w *= nh / o.h; o.h = nh; refreshObj(o); renderPanel(); }));
   box.appendChild(r);
-  box.appendChild(check("Zadrži proporcije", keep(), (v) => { o.keep = v; persist(); }));
+  box.appendChild(check("Keep proportions", keep(), (v) => { o.keep = v; persist(); }));
   const r2 = row(5);
-  r2.appendChild(btn(icon("crop"), () => { S.cropMode = !S.cropMode; refreshObj(o); renderPanel(); }, S.cropMode ? "on" : "", "Iseci"));
-  r2.appendChild(btn(icon("rot-r"), () => setProp(o, "angle", ((o.angle || 0) + 90) % 360), "", "Okreni za 90°"));
-  r2.appendChild(btn(icon("flip-h"), () => setProp(o, "flipH", !o.flipH), o.flipH ? "on" : "", "Preslikaj levo-desno"));
-  r2.appendChild(btn(icon("flip-v"), () => setProp(o, "flipV", !o.flipV), o.flipV ? "on" : "", "Preslikaj gore-dole"));
-  r2.appendChild(btn(icon("layers"), () => setProp(o, "behind", !o.behind), o.behind ? "on" : "", "Iza teksta"));
+  r2.appendChild(btn(icon("crop"), () => { S.cropMode = !S.cropMode; refreshObj(o); renderPanel(); }, S.cropMode ? "on" : "", "Crop"));
+  r2.appendChild(btn(icon("rot-r"), () => setProp(o, "angle", ((o.angle || 0) + 90) % 360), "", "Rotate 90°"));
+  r2.appendChild(btn(icon("flip-h"), () => setProp(o, "flipH", !o.flipH), o.flipH ? "on" : "", "Flip horizontal"));
+  r2.appendChild(btn(icon("flip-v"), () => setProp(o, "flipV", !o.flipV), o.flipV ? "on" : "", "Flip vertical"));
+  r2.appendChild(btn(icon("layers"), () => setProp(o, "behind", !o.behind), o.behind ? "on" : "", "Behind text"));
   box.appendChild(r2);
-  box.appendChild(lbl("Ugao", formatNumber(Math.round(o.angle || 0)) + "°"));
+  box.appendChild(lbl("Angle", formatNumber(Math.round(o.angle || 0)) + "°"));
   box.appendChild(slider((o.angle || 0) / 360, 0, 1, (v) => setProp(o, "angle", Math.round(v * 360) % 360), true));
-  box.appendChild(lbl("Providnost", formatPercent(o.opacity ?? 1)));
+  box.appendChild(lbl("Opacity", formatPercent(o.opacity ?? 1)));
   box.appendChild(slider(o.opacity ?? 1, 0.05, 1, (v) => setProp(o, "opacity", v)));
-  box.appendChild(check("Na svim stranama", !!o.allPages, (v) => setProp(o, "allPages", v)));
-  box.appendChild(btn(icon("refresh") + "Zameni sliku", () => { S.replaceImg = o.id; $("#fileImg").click(); }, "txt"));
+  box.appendChild(check("On all pages", !!o.allPages, (v) => setProp(o, "allPages", v)));
+  box.appendChild(btn(icon("refresh") + "Replace image", () => { S.replaceImg = o.id; $("#fileImg").click(); }, "txt"));
 }
 
 // small controls
 function stepper(v, min, max, step, cb, unit = "", dec = 0) {
   const w = document.createElement("div"); w.className = "stepper";
-  w.innerHTML = `<button aria-label="Manje">${icon("minus")}</button><input><button aria-label="Više">${icon("plus")}</button>`;
+  w.innerHTML = `<button aria-label="Less">${icon("minus")}</button><input><button aria-label="More">${icon("plus")}</button>`;
   const inp = $("input", w);
   inp.value = formatNumber(v, dec) + unit;
   const set = (n) => { n = Math.max(min, Math.min(max, n)); cb(Math.round(n * 100) / 100); };
   const btns = $$("button", w);
   btns[0].onclick = () => set(v - step); btns[1].onclick = () => set(v + step);
-  inp.onchange = () => { const n = parseFloat(inp.value.replace(",", ".")); if (!isNaN(n)) set(n); else inp.value = formatNumber(v, dec) + unit; };
+  inp.onchange = () => { const n = parseFloat(inp.value.replace(/,/g, "")); if (!isNaN(n)) set(n); else inp.value = formatNumber(v, dec) + unit; };
   inp.onfocus = () => inp.select();
   return w;
 }
@@ -588,7 +588,7 @@ function numField(label, v, cb) {
   const f = document.createElement("label"); f.className = "field";
   f.innerHTML = `${label}<input>`;
   const inp = $("input", f); inp.value = formatNumber(v, 0) + " mm";
-  inp.onchange = () => { const n = parseFloat(inp.value.replace(",", ".")); if (n > 0) cb(n); };
+  inp.onchange = () => { const n = parseFloat(inp.value.replace(/,/g, "")); if (n > 0) cb(n); };
   inp.onfocus = () => inp.select();
   return f;
 }
@@ -615,7 +615,7 @@ function slider(v, min, max, cb, raw = false) {
 }
 function colorPick(list, cur, cb, allowNone = false) {
   const w = document.createElement("div"); w.className = "swatches";
-  if (allowNone) w.appendChild(Object.assign(btn("", () => cb(""), "sw none" + (!cur ? " on" : ""), "Bez boje")));
+  if (allowNone) w.appendChild(Object.assign(btn("", () => cb(""), "sw none" + (!cur ? " on" : ""), "No color")));
   for (const c of list) { const b = btn("", () => cb(c), "sw" + (c.toLowerCase() === (cur || "").toLowerCase() ? " on" : ""), c); b.style.background = c; w.appendChild(b); }
   const hex = document.createElement("input"); hex.className = "hex"; hex.value = cur || ""; hex.placeholder = "#000000";
   hex.onchange = () => { const v = hex.value.trim(); if (/^#?[0-9a-f]{6}$/i.test(v)) cb(v.startsWith("#") ? v : "#" + v); else hex.value = cur || ""; };
@@ -634,7 +634,7 @@ function openMenu(anchor, items, { search = false, width, render } = {}) {
   if (below) m.style.top = r.bottom + 4 + "px"; else m.style.bottom = innerHeight - r.top + 4 + "px";
   const list = document.createElement("div"); list.className = "mlist";
   let inp = null;
-  if (search) { inp = document.createElement("input"); inp.placeholder = "Traži"; m.appendChild(inp); }
+  if (search) { inp = document.createElement("input"); inp.placeholder = "Search"; m.appendChild(inp); }
   m.appendChild(list);
   const fill = (q = "") => {
     list.innerHTML = "";
@@ -951,7 +951,7 @@ async function hoverSpan(e, pg, it) {
 }
 async function fixAt(px, py, pg, it) {
   const s = await spanAt(px, py, it);
-  if (!s) { if (it.rot) toast("Ispravka teksta radi na stranama koje nisu okretane u Stranama. Sačuvaj pa probaj ponovo."); return; }
+  if (!s) { if (it.rot) toast("Edit text works on pages not rotated in Pages. Save and try again."); return; }
   const used = (D().objects[it.uid] || []).some((o) => o.type === "fix" && o.orig.join() === s.bbox.join());
   if (used) return;
   $$(".spanhint", pg).forEach((x) => x.remove());
@@ -997,7 +997,7 @@ document.addEventListener("focusout", (e) => {
   for (const [u, list] of Object.entries(d.objects)) {
     const o = list.find((x) => x.id === id); if (!o) continue;
     if (o.type === "text" && !o.text.trim()) {
-      // "Dodaj tekst" with nothing typed leaves nothing on the page (and no undo step)
+      // "Add text" with nothing typed leaves nothing on the page (and no undo step)
       d.objects[u] = list.filter((x) => x !== o);
       if (S.sel === o.id) S.sel = null;
       const el = $(`.obj[data-id="${o.id}"]`); if (el) el.remove();
@@ -1104,7 +1104,7 @@ function renderOrganizer() {
 function selectedItems(d) { return d.items.filter((x) => d.osel.has(x.uid)); }
 $("#oAll").onclick = () => { const d = D(); if (d.osel.size === d.items.length) d.osel.clear(); else d.items.forEach((x) => d.osel.add(x.uid)); renderOrganizer(); };
 function rotateSel(by) {
-  const d = D(); const sel = selectedItems(d); if (!sel.length) { toast("Izaberi strane."); return; }
+  const d = D(); const sel = selectedItems(d); if (!sel.length) { toast("Select pages."); return; }
   commit();
   for (const it of sel) {
     const [W, H] = itemDims(it);
@@ -1131,8 +1131,8 @@ function rotObj(o, W, H, by) {     // clockwise steps of 90; W x H = page size b
 $("#oRotL").onclick = () => rotateSel(-90);
 $("#oRotR").onclick = () => rotateSel(90);
 $("#oDel").onclick = async () => {
-  const d = D(); const sel = selectedItems(d); if (!sel.length) { toast("Izaberi strane."); return; }
-  if (sel.length === d.items.length) { await vd.message("Ne mogu da obrišem sve strane."); return; }
+  const d = D(); const sel = selectedItems(d); if (!sel.length) { toast("Select pages."); return; }
+  if (sel.length === d.items.length) { await vd.message("Can't delete all pages."); return; }
   commit();
   d.items = d.items.filter((x) => !d.osel.has(x.uid)); sel.forEach((x) => delete d.objects[x.uid]); d.osel.clear();
   renderOrganizer();
@@ -1152,28 +1152,28 @@ function payload(d, items = d.items) {
   return { items: items.map((i) => ({ src: i.src, page: i.page, rot: i.rot, uid: i.uid })), objects: d.objects, forms: d.forms, name: d.name };
 }
 $("#oExtract").onclick = async () => {
-  const d = D(); const sel = selectedItems(d); if (!sel.length) { toast("Izaberi strane."); return; }
+  const d = D(); const sel = selectedItems(d); if (!sel.length) { toast("Select pages."); return; }
   const stem = d.name.replace(/\.pdf$/i, "");
   const r = await safe(() => api("/api/extract", { body: { ...payload(d, sel), suggest: (d.path ? d.path.replace(/[^\\/]+$/, "") : "") + `${stem}_izdvojeno.pdf` } }));
   if (r && r.path) savedToast(r.path);
 };
 $("#oSplit").onclick = async () => {
   const d = D();
-  if (!d.osel.size) { await vd.message("Izaberi strane od kojih počinje novi deo."); return; }
+  if (!d.osel.size) { await vd.message("Select the pages where each new part starts."); return; }
   const parts = []; let cur = [];
   d.items.forEach((it, i) => { if (i > 0 && d.osel.has(it.uid) && cur.length) { parts.push(cur); cur = []; } cur.push(it); });
   if (cur.length) parts.push(cur);
-  if (parts.length < 2) { await vd.message("Izaberi bar jednu stranu posle prve."); return; }
-  if (!(await vd.confirm(`Podeliti na ${parts.length} fajla?`, { ok: "Podeli" }))) return;
+  if (parts.length < 2) { await vd.message("Select at least one page after the first."); return; }
+  if (!(await vd.confirm(`Split into ${parts.length} files?`, { ok: "Split" }))) return;
   const r = await safe(() => api("/api/split", { body: { parts: parts.map((p) => payload(d, p).items), objects: d.objects, forms: d.forms, name: d.name,
     dir: d.path ? d.path.replace(/[\\/][^\\/]+$/, "") : "" } }));
-  if (r && r.paths) savedToast(r.paths[0], `Sačuvano ${r.paths.length} fajla.`);
+  if (r && r.paths) savedToast(r.paths[0], `Saved ${r.paths.length} files.`);
 };
 
 // ---------- save / print ----------
-function savedToast(path, text = "Sačuvano.") {
+function savedToast(path, text = "Saved.") {
   const t = document.createElement("div"); t.className = "toast";
-  t.innerHTML = `${icon("check")}<span></span><button class="ghost">${icon("folder")}Prikaži</button>`;
+  t.innerHTML = `${icon("check")}<span></span><button class="ghost">${icon("folder")}Show</button>`;
   $("span", t).textContent = text;
   $("button", t).onclick = () => api("/api/show-in-folder", { body: { path } });
   document.body.appendChild(t); setTimeout(() => t.remove(), 5000);
@@ -1193,11 +1193,11 @@ async function save(ask = false) {
 async function printDlg() {
   const d = D(); if (!d) return;
   const pr = await safe(() => api("/api/printers")); if (!pr) return;
-  if (!pr.available) { await vd.message("Štampa radi samo na Windows-u."); return; }
-  if (!pr.printers.length) { await vd.message("Nije pronađen nijedan štampač."); return; }
+  if (!pr.available) { await vd.message("Printing works only on Windows."); return; }
+  if (!pr.printers.length) { await vd.message("No printer found."); return; }
   const o = { printer: pr.default || pr.printers[0], pages: "", copies: 1, gray: false, duplex: false, fit: true, perSheet: 1 };
   const it = d.items[d.curPage || 0];
-  const res = await modal("Štampa", (body) => {
+  const res = await modal("Print", (body) => {
     body.innerHTML = `<div class="pr"><div class="pr-prev"><img alt="" src="${pageImgUrl(it, 300)}"></div><div class="pr-opts"></div></div>`;
     const P = $(".pr-opts", body);
     const pb = document.createElement("button"); pb.className = "sel-btn";
@@ -1205,25 +1205,25 @@ async function printDlg() {
     pb.onclick = () => openMenu(pb, pr.printers.map((n) => ({ label: n, on: n === o.printer, fn: () => { o.printer = n; showP(); } })));
     P.appendChild(pb);
     const r = row(2);
-    const f1 = document.createElement("label"); f1.className = "field"; f1.innerHTML = "Strane<input placeholder=\"sve\">";
+    const f1 = document.createElement("label"); f1.className = "field"; f1.innerHTML = "Pages<input placeholder=\"all\">";
     $("input", f1).oninput = (e) => (o.pages = e.target.value);
-    const f2 = document.createElement("label"); f2.className = "field"; f2.innerHTML = "Primeraka<input value=\"1\">";
+    const f2 = document.createElement("label"); f2.className = "field"; f2.innerHTML = "Copies<input value=\"1\">";
     $("input", f2).oninput = (e) => (o.copies = Math.max(1, parseInt(e.target.value) || 1));
     r.append(f1, f2); P.appendChild(r);
-    P.appendChild(seg([["Boja", false], ["Crno-belo", true]], o.gray, (v) => (o.gray = v)));
-    P.appendChild(seg([["Jednostrano", false], ["Obostrano", true]], o.duplex, (v) => (o.duplex = v)));
-    P.appendChild(seg([["Uklopi", true], ["Stvarna veličina", false]], o.fit, (v) => (o.fit = v)));
-    P.appendChild(seg([["1 po listu", 1], ["2 po listu", 2]], o.perSheet, (v) => (o.perSheet = v)));
-  }, [{ label: "Odustani", value: false }, { label: "Štampaj", value: true, cls: "primary" }]);
+    P.appendChild(seg([["Color", false], ["Black & white", true]], o.gray, (v) => (o.gray = v)));
+    P.appendChild(seg([["One-sided", false], ["Two-sided", true]], o.duplex, (v) => (o.duplex = v)));
+    P.appendChild(seg([["Fit", true], ["Actual size", false]], o.fit, (v) => (o.fit = v)));
+    P.appendChild(seg([["1 per sheet", 1], ["2 per sheet", 2]], o.perSheet, (v) => (o.perSheet = v)));
+  }, [{ label: "Cancel", value: false }, { label: "Print", value: true, cls: "primary" }]);
   if (!res) return;
   if (o.pages.trim().toLowerCase() === "ova") o.pages = String((d.curPage || 0) + 1);
   const r = await safe(() => api("/api/print", { body: { ...payload(d), options: o } })); if (!r) return;
-  const prog = showProgress("Štampa…");
+  const prog = showProgress("Printing…");
   for (;;) {
     await new Promise((x) => setTimeout(x, 600));
-    const st = await api("/api/print/" + r.job).catch(() => ({ state: "greška", error: "PDFabrika ne odgovara." }));
+    const st = await api("/api/print/" + r.job).catch(() => ({ state: "greška", error: "PDFactory is not responding." }));
     prog.set(st.total ? st.done / st.total : 0);
-    if (st.state !== "radi") { prog.close(); if (st.state === "greška") await vd.message(st.error || "Štampa nije uspela."); else toast("Poslato na štampu."); return; }
+    if (st.state !== "radi") { prog.close(); if (st.state === "greška") await vd.message(st.error || "Printing failed."); else toast("Sent to printer."); return; }
   }
 }
 function seg(opts, cur, cb) {
@@ -1257,30 +1257,30 @@ function modal(title, build, buttons) {
 // ---------- settings ----------
 async function settingsDlg() {
   let s = await safe(() => api("/api/settings")); if (!s) return;
-  await modal("Podešavanja", (body) => {
+  await modal("Settings", (body) => {
     const draw = () => {
       body.innerHTML = "";
       const sec = (t) => { const x = document.createElement("div"); x.className = "set-sec"; x.innerHTML = `<h3>${t}</h3>`; body.appendChild(x); return x; };
       const srow = (parent, label, el) => { const r = document.createElement("div"); r.className = "set-row"; r.innerHTML = `<span>${label}</span>`; r.appendChild(el); parent.appendChild(r); };
-      const tgl = (on, fn) => { const b = document.createElement("button"); b.className = "tgl" + (on ? " on" : ""); b.setAttribute("aria-label", "Uključi ili isključi"); b.onclick = fn; return b; };
+      const tgl = (on, fn) => { const b = document.createElement("button"); b.className = "tgl" + (on ? " on" : ""); b.setAttribute("aria-label", "Toggle"); b.onclick = fn; return b; };
 
-      const a = sec("Izgled");
-      srow(a, "Tema", seg([["Tamna", "dark"], ["Svetla", "light"]], s.theme, async (v) => {
+      const a = sec("Appearance");
+      srow(a, "Theme", seg([["Dark", "dark"], ["Light", "light"]], s.theme, async (v) => {
         document.documentElement.dataset.theme = v; s = await api("/api/settings", { body: { theme: v } }); }));
 
       if (s.windows) {
         const b = sec("Windows");
-        srow(b, "Pokreće se sa Windows-om", tgl(s.autostart, async () => { s = await api("/api/settings", { body: { autostart: !s.autostart } }); draw(); }));
+        srow(b, "Start with Windows", tgl(s.autostart, async () => { s = await api("/api/settings", { body: { autostart: !s.autostart } }); draw(); }));
         if (s.is_default) {
           const ok = document.createElement("span"); ok.className = "ok isdef";
-          ok.innerHTML = `${icon("check")}Podrazumevani program`;
-          srow(b, "Program za PDF", ok);
+          ok.innerHTML = `${icon("check")}Default app`;
+          srow(b, "PDF app", ok);
         } else {
-          srow(b, "Program za PDF", btn("Postavi kao podrazumevani", async () => { await api("/api/default-app", { body: {} }); watchDefault(); }));
+          srow(b, "PDF app", btn("Set as default", async () => { await api("/api/default-app", { body: {} }); watchDefault(); }));
         }
       }
 
-      const lg = sec("Dnevnik");
+      const lg = sec("Log");
       const box = document.createElement("div"); box.className = "log";
       const ctl = document.createElement("div"); ctl.className = "set-row";
       const q = document.createElement("input"); q.placeholder = "Filter"; q.style.flex = "1";
@@ -1291,34 +1291,48 @@ async function settingsDlg() {
         box.scrollTop = box.scrollHeight;
       };
       q.oninput = () => { clearTimeout(q.t); q.t = setTimeout(load, 250); };
-      const pb = btn("Samo problemi", () => { only = !only; pb.classList.toggle("on", only); load(); });
+      const pb = btn("Problems only", () => { only = !only; pb.classList.toggle("on", only); load(); });
       ctl.append(q, pb);
       lg.append(ctl, box);
       const del = document.createElement("div"); del.className = "set-row";
-      del.innerHTML = `<span class="muted">Veličina: ${formatNumber(s.log_mb, 1)} MB</span>`;
-      del.appendChild(btn("Obriši starije od 30 dana", async () => {
-        if (!(await vd.confirm("Obrisati dnevnik stariji od 30 dana?", { ok: "Obriši", danger: true }))) return;
+      del.innerHTML = `<span class="muted">Size: ${formatNumber(s.log_mb, 1)} MB</span>`;
+      del.appendChild(btn("Delete older than 30 days", async () => {
+        if (!(await vd.confirm("Delete log entries older than 30 days?", { ok: "Delete", danger: true }))) return;
         await api("/api/log/delete", { body: { days: 30 } }); s = await api("/api/settings"); draw(); }));
       lg.appendChild(del);
       load();
 
-      const v = sec("Verzija");
+      const ab = sec("About");
+      const about = document.createElement("div"); about.className = "about";
+      about.innerHTML = `
+        <p>PDFactory reads and edits PDF files on this computer. A small local server (127.0.0.1) does the PDF work and this window
+        shows it. Files never leave the computer; the internet is used only to check for and download updates.
+        No account, no subscription, no AI tokens.</p>
+        <p>Made by Mirko Rudić with Claude Opus 5.5 (Anthropic).</p>
+        <div class="lic">${[["PyMuPDF / MuPDF", "PDF engine", "AGPL 3.0"], ["Tesseract OCR", "text recognition", "Apache 2.0"],
+          ["FastAPI, Uvicorn", "local server", "MIT, BSD"], ["Pillow", "images", "MIT-CMU"], ["pystray", "tray icon", "LGPL 3.0"],
+          ["pywin32", "printing, Windows", "PSF"], ["Tabler Icons", "icons", "MIT"], ["Python", "runtime", "PSF"]]
+          .map(([a, b, c]) => `<span>${a}</span><span class="muted">${b}</span><span class="muted">${c}</span>`).join("")}</div>
+        <p class="muted">PDFactory license: GNU AGPL 3.0 (because of PyMuPDF). Free to use and share; if it is ever sold or
+        published, its source must stay open, or PyMuPDF needs a commercial license.</p>`;
+      ab.appendChild(about);
+      const v = sec("Version");
       const vr = document.createElement("div"); vr.className = "set-row";
       vr.innerHTML = `<span>${esc(s.version)}</span>`;
-      vr.appendChild(btn(icon("refresh") + "Proveri i ažuriraj", async (e) => {
+      if (s.git) vr.appendChild(btn(icon("refresh") + "Check and update", async (e) => {
         const r = await api("/api/update").catch(() => ({ ok: false }));
         const nova = r.ok && (r.behind || r.restart);
         const el = e.target.closest("button");
         if (nova) {                             // one click: check, download and restart
-          el.outerHTML = `<span class="ok">Ažuriranje na ${esc(r.version || "novu verziju")}…</span>`;
+          el.outerHTML = `<span class="ok">Updating to ${esc(r.version || "the new version")}…</span>`;
           if (!(await doUpdate(r))) draw();
           return;
         }
-        el.outerHTML = r.ok ? '<span class="muted">Najnovija verzija</span>' : '<span class="muted">Provera nije uspela</span>';
+        el.outerHTML = r.ok ? '<span class="muted">Up to date</span>' : '<span class="muted">Check failed</span>';
       }));
       v.appendChild(vr);
     };
-    // after "Postavi": Windows Settings is a separate window; watch until PDFabrika is the default (or the dialog closes)
+    // after "Set as default": Windows Settings is a separate window; watch until PDFactory is the default (or the dialog closes)
     const watchDefault = () => {
       clearInterval(S.defWatch);
       const t0 = Date.now();
@@ -1329,7 +1343,7 @@ async function settingsDlg() {
       }, 1500);
     };
     draw();
-  }, [{ label: "Zatvori", value: true, cls: "primary" }]);
+  }, [{ label: "Close", value: true, cls: "primary" }]);
   clearInterval(S.defWatch);
 }
 
@@ -1341,14 +1355,14 @@ function bar(id, html, cls = "") {
   b.className = "bar " + cls; b.innerHTML = html; return b;
 }
 function showUpdate(r) {
-  const b = bar("upd", `${icon("refresh")}<span>Nova verzija ${esc(r.version || "")}</span><button class="primary">Ažuriraj</button>`);
+  const b = bar("upd", `${icon("refresh")}<span>New version ${esc(r.version || "")}</span><button class="primary">Update</button>`);
   $("button", b).onclick = () => doUpdate(r);
 }
 async function doUpdate(r) {
-  if (S.docs.some((d) => d.dirty) && !(await vd.confirm("Ima nesačuvanih izmena. Ažurirati sada?", { ok: "Ažuriraj" }))) return false;
+  if (S.docs.some((d) => d.dirty) && !(await vd.confirm("There are unsaved changes. Update now?", { ok: "Update" }))) return false;
   persist();                                   // open files and edits come back after the restart
   try { localStorage.setItem("pdfabrika.upd", r.version || ""); } catch (e) { /* no storage */ }
-  bar("upd", `${icon("refresh")}<span>Ažuriranje na ${esc(r.version || "novu verziju")}…</span>`);
+  bar("upd", `${icon("refresh")}<span>Updating to ${esc(r.version || "the new version")}…</span>`);
   const p = await safe(() => api("/api/update", { body: {} }));
   if (p && p.ok) { setTimeout(waitRestart, 1500); return true; }
   bar("upd", null);
@@ -1363,7 +1377,7 @@ async function waitRestart() {
 async function checkDefault() {
   const r = await api("/api/default-check").catch(() => null);
   if (r && r.lost) {
-    const b = bar("def", `${icon("alert")}<span>PDFabrika više nije podrazumevani program za PDF.</span><button>Vrati</button><button class="sq ghost" aria-label="Zatvori">${icon("x")}</button>`, "red");
+    const b = bar("def", `${icon("alert")}<span>PDFactory is no longer the default PDF app.</span><button>Vrati</button><button class="sq ghost" aria-label="Close">${icon("x")}</button>`, "red");
     $$("button", b)[0].onclick = () => api("/api/default-app", { body: {} });
     $$("button", b)[1].onclick = () => b.remove();
   }
@@ -1372,8 +1386,8 @@ async function checkDefault() {
 // ---------- quit ----------
 async function quit() {
   const dirty = S.docs.filter((d) => d.dirty);
-  const msg = dirty.length ? `Ima nesačuvanih izmena (${dirty.map((d) => d.name).join(", ")}). Ugasiti PDFabriku?` : "Ugasiti PDFabriku?";
-  if (!(await vd.confirm(msg, { ok: "Ugasi", danger: !!dirty.length }))) return;
+  const msg = dirty.length ? `There are unsaved changes (${dirty.map((d) => d.name).join(", ")}). Quit PDFactory?` : "Quit PDFactory?";
+  if (!(await vd.confirm(msg, { ok: "Quit", danger: !!dirty.length }))) return;
   S.docs = []; persist();
   await api("/api/shutdown", { body: {} }).catch(() => {});
   window.close();
@@ -1385,8 +1399,8 @@ $("#bOpen").onclick = pickOpen; $("#bOpen2").onclick = pickOpen;
 $("#bSave").onclick = () => save(false);
 $("#bSaveMenu").onclick = () => {
   const d = D(); if (!d) return;
-  const items = [{ label: "Sačuvaj kao…", html: icon("save") + "Sačuvaj kao…", fn: () => save(true) }];
-  if (d.path) items.push({ label: "Prikaži u folderu", html: icon("folder") + "Prikaži u folderu", fn: () => api("/api/show-in-folder", { body: { path: d.path } }) });
+  const items = [{ label: "Save as…", html: icon("save") + "Save as…", fn: () => save(true) }];
+  if (d.path) items.push({ label: "Show in folder", html: icon("folder") + "Show in folder", fn: () => api("/api/show-in-folder", { body: { path: d.path } }) });
   openMenu($("#bSaveMenu"), items, { width: 220 });
 };
 $("#bPrint").onclick = printDlg;
@@ -1397,8 +1411,8 @@ $("#zIn").onclick = () => setZoom(S.zoom * 1.15);
 $("#z100").onclick = () => setZoom(1);
 $("#zOut").onclick = () => setZoom(S.zoom / 1.15);
 $("#zVal").onclick = () => openMenu($("#zVal"), [
-  { label: "Automatski", on: S.fit === "auto", fn: () => setZoom(1, "auto") },
-  { label: "Uklopi širinu", on: S.fit === "width", fn: () => setZoom(1, "width") },
+  { label: "Auto", on: S.fit === "auto", fn: () => setZoom(1, "auto") },
+  { label: "Fit width", on: S.fit === "width", fn: () => setZoom(1, "width") },
   ...[0.5, 0.75, 1, 1.25, 1.5, 2, 3].map((z) => ({ label: formatPercent(z), on: !S.fit && Math.abs(S.zoom - z) < 0.01, fn: () => setZoom(z) })),
 ], { width: 150 });
 $("#pages").addEventListener("scroll", () => requestAnimationFrame(trackPage), { passive: true });
@@ -1491,7 +1505,7 @@ addEventListener("drop", async (e) => {
   } else uploadFiles(files);
 });
 
-// files opened from outside (double click on a PDF while PDFabrika runs)
+// files opened from outside (double click on a PDF while PDFactory runs)
 async function pollInbox() {
   try {
     const r = await api("/api/inbox");
@@ -1512,7 +1526,7 @@ async function pollInbox() {
   autoOcr();
   try {
     const v = localStorage.getItem("pdfabrika.upd");
-    if (v !== null) { localStorage.removeItem("pdfabrika.upd"); toast(`Ažurirano: ${h.version}`); }
+    if (v !== null) { localStorage.removeItem("pdfabrika.upd"); toast(`Updated: ${h.version}`); }
   } catch (e) { /* no storage */ }
   const ext = new URLSearchParams(location.search).get("otvori");
   if (ext) history.replaceState(null, "", "/");

@@ -1,0 +1,14 @@
+PDFactory
+Copyright (C) 2026 Mirko Rudić
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU Affero General Public License as published by the Free Software Foundation, version 3.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero
+General Public License for more details: https://www.gnu.org/licenses/agpl-3.0.txt
+
+PDFactory uses PyMuPDF / MuPDF (Artifex, GNU AGPL 3.0), which is why PDFactory is AGPL as well.
+Other parts: Tesseract OCR and tessdata (Apache 2.0), FastAPI (MIT), Uvicorn (BSD 3-Clause),
+python-multipart (Apache 2.0), Pillow (MIT-CMU), pystray (LGPL 3.0), pywin32 (PSF 2.0),
+Tabler Icons (MIT), Python (PSF).

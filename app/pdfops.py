@@ -36,7 +36,7 @@ class Source:
         self.name = name
         self.doc = fitz.open("pdf", data)
         if self.doc.needs_pass:
-            raise UserError("PDF je zaključan lozinkom.")
+            raise UserError("The PDF is password protected.")
         self.lock = threading.RLock()
         self.ocr = None  # progress dict while OCR runs
 
@@ -57,7 +57,7 @@ class Source:
 def open_path(path: str) -> Source:
     p = Path(path)
     if not p.exists():
-        raise UserError("Fajl ne postoji.")
+        raise UserError("The file doesn't exist.")
     data = p.read_bytes()
     return _add(data, str(p), p.name)
 
@@ -73,14 +73,14 @@ def _add(data: bytes, path, name) -> Source:
         name = Path(name).stem + ".pdf"
         path = None
     elif not data[:1024].lstrip().startswith(b"%PDF") and b"%PDF" not in data[:1024]:
-        raise UserError("Ovo nije PDF fajl.")
+        raise UserError("This is not a PDF file.")
     try:
         s = Source(data, path, name)
     except UserError:
         raise
     except Exception:
         log.exception("open failed: %s", name)
-        raise UserError("PDF ne može da se otvori (oštećen fajl).")
+        raise UserError("The PDF can't be opened (damaged file).")
     with _lock:
         SOURCES[s.id] = s
     log.info("open %s (%d pages) id=%s", path or name, s.doc.page_count, s.id)
@@ -108,7 +108,7 @@ def image_to_pdf(data: bytes) -> bytes:
 def get(src_id: str) -> Source:
     s = SOURCES.get(src_id)
     if not s:
-        raise UserError("Dokument više nije otvoren. Otvori ga ponovo.")
+        raise UserError("The document is no longer open. Open it again.")
     return s
 
 
@@ -248,7 +248,7 @@ def compose(items: list[dict], objects: dict | None = None, forms: dict | None =
     """items: [{src, page, rot, uid}] -> new document with edits applied.
     objects: {uid: [object, ...]} in display coordinates of that item. forms: {uid: {field: value}}."""
     if not items:
-        raise UserError("Nema nijedne strane.")
+        raise UserError("There are no pages.")
     objects, forms = objects or {}, forms or {}
     first = items[0]["src"]
     identity = (all(it["src"] == first and it["page"] == i and not it.get("rot") for i, it in enumerate(items))
@@ -317,7 +317,7 @@ def _apply_objects(page, objs: list[dict]):
             raise
         except Exception:
             log.exception("object %s failed on page %s", t, page.number)
-            raise UserError("Jedna izmena ne može da se upiše u PDF. Detalji su u dnevniku.")
+            raise UserError("One of the changes can't be written to the PDF. Details are in the log.")
 
 
 def _css_font(o) -> tuple[str, fitz.Archive]:
@@ -379,7 +379,7 @@ def _image(page, o):
     from PIL import Image
     data = IMAGES.get(o.get("img", ""))
     if data is None:
-        raise UserError("Slika više nije dostupna. Ubaci je ponovo.")
+        raise UserError("The image is no longer available. Insert it again.")
     im = Image.open(io.BytesIO(data))
     im.load()
     im = im.convert("RGBA")
@@ -472,11 +472,11 @@ def save_doc(doc: fitz.Document, target: str, backup_dir: Path | None = None, ke
         os.replace(tmp, t)
     except PermissionError:
         tmp.unlink(missing_ok=True)
-        raise UserError("Fajl je otvoren u drugom programu ili je zaključan. Zatvori ga pa probaj ponovo.")
+        raise UserError("The file is open in another program or locked. Close it and try again.")
     except OSError:
         tmp.unlink(missing_ok=True)
         log.exception("save failed %s", t)
-        raise UserError("Čuvanje nije uspelo. Detalji su u dnevniku.")
+        raise UserError("Saving failed. Details are in the log.")
     log.info("saved %s (%d pages, %d KB)", t, doc.page_count, t.stat().st_size // 1024)
     return str(t)
 
@@ -498,7 +498,7 @@ def parse_ranges(text: str, n: int) -> list[int]:
         elif part.isdigit() and 1 <= int(part) <= n:
             out.append(int(part))
         else:
-            raise UserError(f"Ne razumem „{part}“ u spisku strana.")
+            raise UserError(f"Can't read “{part}” in the page list.")
     return [p - 1 for p in out]
 
 

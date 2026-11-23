@@ -10,7 +10,9 @@ import applog
 
 log = applog.get("windows")
 APP_DIR = Path(__file__).resolve().parents[1]
-LAUNCHER = APP_DIR / "PDFabrika.pyw"
+LAUNCHER = APP_DIR / "PDFactory.pyw"
+NAME = "PDFactory"            # shown everywhere in Windows
+# internal ids keep the first name: the user's default-app choice is stored against PROGID
 ICON = APP_DIR / "assets" / "pdfabrika.ico"          # the program
 FILE_ICON = APP_DIR / "assets" / "pdf_fajl.ico"     # .pdf files in Explorer
 PROGID = "PDFabrika.PDF"
@@ -33,13 +35,13 @@ def app_exe() -> str:
 
 
 def _app_exe() -> str:
-    """PDFabrika.exe = copy of the venv's pythonw.exe with our icon. Windows shows the program's
+    """PDFactory.exe = copy of the venv's pythonw.exe with our icon. Windows shows the program's
     name and icon from the .exe, so with pythonw.exe it says 'Python' in Default apps and Task Manager.
     Falls back to pythonw.exe when the copy can't be made or doesn't start the venv."""
     if not WIN:
         return pythonw()
     src = Path(pythonw())
-    dst = src.with_name("PDFabrika.exe")
+    dst = src.with_name("PDFactory.exe")
     ok_flag = dst.with_suffix(".ok")
     try:
         stamp = f"{src.stat().st_size}:{src.stat().st_mtime_ns}:{ICON.stat().st_mtime_ns}"
@@ -53,10 +55,10 @@ def _app_exe() -> str:
                            timeout=60, creationflags=NOWIN)
         prefix = (r.stdout or "").strip()
         if r.returncode or Path(prefix).resolve() != src.parents[1].resolve():
-            log.warning("PDFabrika.exe does not start the venv (rc=%s, %s %s)", r.returncode, prefix, r.stderr[-200:])
+            log.warning("PDFactory.exe does not start the venv (rc=%s, %s %s)", r.returncode, prefix, r.stderr[-200:])
             tmp.unlink(missing_ok=True)
             return str(src)
-        old = dst.with_name("PDFabrika.old.exe")
+        old = dst.with_name("PDFactory.old.exe")
         try:
             old.unlink(missing_ok=True)
         except OSError:
@@ -67,13 +69,18 @@ def _app_exe() -> str:
             os.replace(tmp, dst)
         except OSError:
             tmp.unlink(missing_ok=True)
-            log.warning("PDFabrika.exe in use, icon updated on next start")
+            log.warning("PDFactory.exe in use, icon updated on next start")
             return str(dst) if dst.exists() else str(src)
         ok_flag.write_text(stamp)
-        log.info("PDFabrika.exe ready")
+        for oldname in ("PDFabrika.exe", "PDFabrika.ok", "PDFabrika.old.exe"):     # previous app name
+            try:
+                (src.parent / oldname).unlink(missing_ok=True)
+            except OSError:
+                pass
+        log.info("PDFactory.exe ready")
         return str(dst)
     except Exception:
-        log.exception("PDFabrika.exe not made")
+        log.exception("PDFactory.exe not made")
         return str(dst) if dst.exists() else str(src)
 
 
@@ -123,7 +130,7 @@ def _shortcut(lnk: Path, args: str = ""):
          f"$s.Arguments = '\"{q(LAUNCHER)}\" {q(args)}'\n"
          f"$s.WorkingDirectory = '{q(APP_DIR)}'\n"
          f"$s.IconLocation = '{q(ICON)},0'\n"
-         f"$s.Description = 'PDFabrika'\n"
+         f"$s.Description = 'PDFactory'\n"
          "$s.Save()\n")
     return _ps(s)
 
@@ -143,27 +150,28 @@ def _startup_dir() -> Path:
 
 
 def desktop_shortcut():
-    """P1: one shortcut; an old PDFabrika shortcut under another name is removed."""
+    """P1: one shortcut; old shortcuts of this app (PDFabrika, other names) are removed."""
     d = _desktop()
     for old in d.glob("*.lnk"):
-        if old.name != "PDFabrika.lnk" and "pdfabrika" in old.name.lower():
+        if old.name != "PDFactory.lnk" and any(n in old.name.lower() for n in ("pdfabrika", "pdfactory")):
             try:
                 old.unlink()
             except OSError:
                 pass
-    ok = _shortcut(d / "PDFabrika.lnk")
+    ok = _shortcut(d / "PDFactory.lnk")
     log.info("desktop shortcut: %s", ok)
     return ok
 
 
 def autostart_enabled() -> bool:
-    return WIN and (_startup_dir() / "PDFabrika.lnk").exists()
+    return WIN and any((_startup_dir() / n).exists() for n in ("PDFactory.lnk", "PDFabrika.lnk"))
 
 
 def set_autostart(on: bool):
     if not WIN:
         return False
-    lnk = _startup_dir() / "PDFabrika.lnk"
+    (_startup_dir() / "PDFabrika.lnk").unlink(missing_ok=True)      # old name
+    lnk = _startup_dir() / "PDFactory.lnk"
     if on:
         return _shortcut(lnk, "--tiho")
     lnk.unlink(missing_ok=True)
@@ -171,7 +179,7 @@ def set_autostart(on: bool):
 
 
 def register():
-    """Registers PDFabrika as a PDF program so it is offered in Windows 'Default apps'."""
+    """Registers PDFactory as a PDF program so it is offered in Windows 'Default apps'."""
     if not WIN:
         return False
     import winreg
@@ -183,25 +191,28 @@ def register():
         with winreg.CreateKey(C, path) as k:
             winreg.SetValueEx(k, name, 0, winreg.REG_SZ, value)
     base = rf"Software\Classes\{PROGID}"
-    put(base, "", "PDF dokument")
+    put(base, "", "PDF document")
     put(base + r"\DefaultIcon", "", f"{FILE_ICON},0")
     put(base + r"\shell\open\command", "", cmd)
-    put(base + r"\shell\open", "FriendlyAppName", "PDFabrika")
-    put(base + r"\Application", "ApplicationName", "PDFabrika")
+    put(base + r"\shell\open", "FriendlyAppName", NAME)
+    put(base + r"\Application", "ApplicationName", NAME)
     put(base + r"\Application", "ApplicationIcon", f"{ICON},0")
     put(base + r"\Application", "ApplicationCompany", "VAJB")
     # name Windows shows for the program file (otherwise 'Python' from pythonw.exe)
     mui = r"Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache"
     for e in {exe, pythonw()}:
-        put(mui, e + ".FriendlyAppName", "PDFabrika")
+        put(mui, e + ".FriendlyAppName", NAME)
         put(mui, e + ".ApplicationCompany", "VAJB")
     put(r"Software\Classes\.pdf\OpenWithProgids", PROGID, "")
-    if Path(exe).name == "PDFabrika.exe":     # never on pythonw.exe: that key is shared by every Python app
-        app = r"Software\Classes\Applications\PDFabrika.exe"
-        put(app, "FriendlyAppName", "PDFabrika")
+    if Path(exe).name == "PDFactory.exe":     # never on pythonw.exe: that key is shared by every Python app
+        app = r"Software\Classes\Applications\PDFactory.exe"
+        put(app, "FriendlyAppName", NAME)
         put(app + r"\shell\open\command", "", cmd)
         put(app + r"\SupportedTypes", ".pdf", "")
-    for old in (r"Software\Classes\Applications\PDFabrika.pyw\shell\open\command", r"Software\Classes\Applications\PDFabrika.pyw\shell\open",
+    for old in (r"Software\Classes\Applications\PDFabrika.exe\shell\open\command", r"Software\Classes\Applications\PDFabrika.exe\shell\open",
+                r"Software\Classes\Applications\PDFabrika.exe\shell", r"Software\Classes\Applications\PDFabrika.exe\SupportedTypes",
+                r"Software\Classes\Applications\PDFabrika.exe",         # 0.1.x exe name
+                r"Software\Classes\Applications\PDFabrika.pyw\shell\open\command", r"Software\Classes\Applications\PDFabrika.pyw\shell\open",
                 r"Software\Classes\Applications\PDFabrika.pyw\shell", r"Software\Classes\Applications\PDFabrika.pyw\SupportedTypes",
                 r"Software\Classes\Applications\PDFabrika.pyw"):      # 0.1.0 registered the .pyw
         try:
@@ -209,8 +220,8 @@ def register():
         except OSError:
             pass
     cap = r"Software\PDFabrika\Capabilities"
-    put(cap, "ApplicationName", "PDFabrika")
-    put(cap, "ApplicationDescription", "Čitanje i izmene PDF fajlova")
+    put(cap, "ApplicationName", NAME)
+    put(cap, "ApplicationDescription", "Read and edit PDF files")
     put(cap, "ApplicationIcon", f"{ICON},0")
     put(cap + r"\FileAssociations", ".pdf", PROGID)
     put(r"Software\RegisteredApplications", "PDFabrika", cap)
@@ -256,7 +267,7 @@ def current_default() -> str:
 
 def is_default() -> bool:
     cur = current_default()
-    ok = cur == PROGID or "pdfabrika" in cur.lower()     # also "Applications\\PDFabrika.exe" (chosen via "Open with")
+    ok = cur == PROGID or any(n in cur.lower() for n in ("pdfabrika", "pdfactory"))   # also "Applications\\PDFactory.exe" ("Open with")
     global _last_default
     if cur != _last_default:          # logged once per change, the settings window asks every 1.5 s
         log.info("PDF default is %r", cur)
@@ -274,7 +285,7 @@ def _front_settings_window(timeout=8.0):
     import time
     from ctypes import wintypes
     u = ctypes.windll.user32
-    titles = ("Settings", "Postavke", "Podešavanja", "Postavke sustava", "Einstellungen")
+    titles = ("Settings", "Postavke", "Settings", "Postavke sustava", "Einstellungen")
     end = time.time() + timeout
     while time.time() < end:
         found = []
@@ -306,7 +317,7 @@ def _front_settings_window(timeout=8.0):
 
 
 def open_default_apps():
-    """Windows lets only the user pick the default program: opens the PDFabrika page in Settings, in front."""
+    """Windows lets only the user pick the default program: opens the PDFactory page in Settings, in front."""
     register()
     os.startfile("ms-settings:defaultapps?registeredAppUser=PDFabrika")
     threading.Thread(target=_front_settings_window, name="podesavanja-napred", daemon=True).start()
@@ -342,8 +353,8 @@ def ask_open(initial_dir: str | None = None, multiple=True) -> list[str]:
         root = _tk()
         try:
             res = filedialog.askopenfilenames(
-                parent=root, title="Otvori", initialdir=initial_dir or str(Path.home() / "Documents"),
-                filetypes=[("PDF i slike", "*.pdf *.png *.jpg *.jpeg *.webp *.bmp *.tif *.tiff"), ("Svi fajlovi", "*.*")])
+                parent=root, title="Open", initialdir=initial_dir or str(Path.home() / "Documents"),
+                filetypes=[("PDF and images", "*.pdf *.png *.jpg *.jpeg *.webp *.bmp *.tif *.tiff"), ("All files", "*.*")])
             return list(res) if multiple else list(res)[:1]
         finally:
             root.destroy()
@@ -355,7 +366,7 @@ def ask_save(initial: str | None) -> str | None:
         root = _tk()
         try:
             p = Path(initial) if initial else Path.home() / "Documents" / "dokument.pdf"
-            res = filedialog.asksaveasfilename(parent=root, title="Sačuvaj kao", initialdir=str(p.parent),
+            res = filedialog.asksaveasfilename(parent=root, title="Save as", initialdir=str(p.parent),
                                                initialfile=p.name, defaultextension=".pdf",
                                                filetypes=[("PDF", "*.pdf")])
             return res or None
@@ -368,7 +379,7 @@ def ask_folder(initial: str | None) -> str | None:
         from tkinter import filedialog
         root = _tk()
         try:
-            return filedialog.askdirectory(parent=root, title="Izaberi folder", initialdir=initial) or None
+            return filedialog.askdirectory(parent=root, title="Choose folder", initialdir=initial) or None
         finally:
             root.destroy()
 

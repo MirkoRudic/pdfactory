@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="sr" data-theme="dark" writingsuggestions="false">
+<html lang="en" data-theme="dark" writingsuggestions="false">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>PDFabrika</title>
+<title>PDFactory</title>
 <link rel="icon" href="/logo.png">
 <link rel="stylesheet" href="base.css">
 <link rel="stylesheet" href="app.css">
@@ -65,24 +65,24 @@
 
 <header class="top">
   <div class="lead">
-    <button id="bOpen"><svg class="icon"><use href="#i-open"/></svg>Otvori</button>
+    <button id="bOpen"><svg class="icon"><use href="#i-open"/></svg>Open</button>
     <span class="hsep"></span>
-    <button id="bUndo" class="sq" aria-label="Poništi"><svg class="icon"><use href="#i-undo"/></svg></button>
-    <button id="bRedo" class="sq" aria-label="Vrati"><svg class="icon"><use href="#i-redo"/></svg></button>
+    <button id="bUndo" class="sq" aria-label="Undo"><svg class="icon"><use href="#i-undo"/></svg></button>
+    <button id="bRedo" class="sq" aria-label="Redo"><svg class="icon"><use href="#i-redo"/></svg></button>
   </div>
-  <nav class="modes" aria-label="Režim">
-    <button class="mode" data-mode="read"><svg class="icon"><use href="#i-book"/></svg>Čitanje</button>
-    <button class="mode" data-mode="edit"><svg class="icon"><use href="#i-pencil"/></svg>Izmene</button>
-    <button class="mode" data-mode="pages"><svg class="icon"><use href="#i-grid"/></svg>Strane</button>
+  <nav class="modes" aria-label="Mode">
+    <button class="mode" data-mode="read"><svg class="icon"><use href="#i-book"/></svg>Read</button>
+    <button class="mode" data-mode="edit"><svg class="icon"><use href="#i-pencil"/></svg>Edit</button>
+    <button class="mode" data-mode="pages"><svg class="icon"><use href="#i-grid"/></svg>Pages</button>
   </nav>
   <div class="actions">
     <div class="split">
-      <button id="bSave" class="primary"><svg class="icon"><use href="#i-save"/></svg>Sačuvaj</button>
-      <button id="bSaveMenu" class="primary sq" aria-label="Još načina čuvanja"><svg class="icon"><use href="#i-down"/></svg></button>
+      <button id="bSave" class="primary"><svg class="icon"><use href="#i-save"/></svg>Save</button>
+      <button id="bSaveMenu" class="primary sq" aria-label="More save options"><svg class="icon"><use href="#i-down"/></svg></button>
     </div>
-    <button id="bPrint" class="sq" aria-label="Štampaj"><svg class="icon"><use href="#i-print"/></svg></button>
-    <button id="bSettings" class="sq" aria-label="Podešavanja"><svg class="icon"><use href="#i-settings"/></svg></button>
-    <button id="bQuit" class="sq" aria-label="Ugasi"><svg class="icon"><use href="#i-power"/></svg></button>
+    <button id="bPrint" class="sq" aria-label="Print"><svg class="icon"><use href="#i-print"/></svg></button>
+    <button id="bSettings" class="sq" aria-label="Settings"><svg class="icon"><use href="#i-settings"/></svg></button>
+    <button id="bQuit" class="sq" aria-label="Quit"><svg class="icon"><use href="#i-power"/></svg></button>
   </div>
 </header>
 <div id="tabs" class="tabs" hidden></div>
@@ -94,8 +94,8 @@
     <div class="start-box">
       <div class="drop" id="drop">
         <img class="logo-big" src="/logo.png" alt="">
-        <button class="primary" id="bOpen2"><svg class="icon"><use href="#i-open"/></svg>Otvori PDF</button>
-        <span class="muted">ili prevuci fajl ovde</span>
+        <button class="primary" id="bOpen2"><svg class="icon"><use href="#i-open"/></svg>Open PDF</button>
+        <span class="muted">or drop a file here</span>
       </div>
       <div class="recent" id="recent"></div>
     </div>
@@ -103,16 +103,16 @@
 
   <!-- read + edit -->
   <section id="viewer" class="viewer" hidden>
-    <aside class="thumbs" id="thumbs" aria-label="Strane"></aside>
+    <aside class="thumbs" id="thumbs" aria-label="Pages"></aside>
     <div class="center">
       <div class="vbar" id="vbar">
         <div class="vbar-l" id="vbarL"></div>
         <div class="search">
           <svg class="icon"><use href="#i-search"/></svg>
-          <input id="q" placeholder="Pretraga" autocomplete="off">
+          <input id="q" placeholder="Search" autocomplete="off">
           <span id="qn" class="muted"></span>
-          <button class="sq ghost" id="qPrev" aria-label="Prethodno"><svg class="icon"><use href="#i-up"/></svg></button>
-          <button class="sq ghost" id="qNext" aria-label="Sledeće"><svg class="icon"><use href="#i-down"/></svg></button>
+          <button class="sq ghost" id="qPrev" aria-label="Previous"><svg class="icon"><use href="#i-up"/></svg></button>
+          <button class="sq ghost" id="qNext" aria-label="Next"><svg class="icon"><use href="#i-down"/></svg></button>
         </div>
         <div class="vbar-r" id="vbarR"></div>
       </div>
@@ -124,13 +124,13 @@
   <!-- pages mode -->
   <section id="organizer" class="organizer" hidden>
     <div class="obar">
-      <button id="oAdd"><svg class="icon"><use href="#i-file-plus"/></svg>Dodaj PDF</button>
-      <button id="oAll"><svg class="icon"><use href="#i-select"/></svg>Izaberi sve</button>
-      <button id="oRotL" class="sq" aria-label="Okreni levo"><svg class="icon"><use href="#i-rot-l"/></svg></button>
-      <button id="oRotR" class="sq" aria-label="Okreni desno"><svg class="icon"><use href="#i-rot-r"/></svg></button>
-      <button id="oExtract"><svg class="icon"><use href="#i-export"/></svg>Izdvoji izabrane</button>
-      <button id="oSplit"><svg class="icon"><use href="#i-scissors"/></svg>Podeli</button>
-      <button id="oDel"><svg class="icon"><use href="#i-trash"/></svg>Obriši</button>
+      <button id="oAdd"><svg class="icon"><use href="#i-file-plus"/></svg>Add PDF</button>
+      <button id="oAll"><svg class="icon"><use href="#i-select"/></svg>Select all</button>
+      <button id="oRotL" class="sq" aria-label="Rotate left"><svg class="icon"><use href="#i-rot-l"/></svg></button>
+      <button id="oRotR" class="sq" aria-label="Rotate right"><svg class="icon"><use href="#i-rot-r"/></svg></button>
+      <button id="oExtract"><svg class="icon"><use href="#i-export"/></svg>Extract selected</button>
+      <button id="oSplit"><svg class="icon"><use href="#i-scissors"/></svg>Split</button>
+      <button id="oDel"><svg class="icon"><use href="#i-trash"/></svg>Delete</button>
     </div>
     <div class="ogrid" id="ogrid"></div>
     <div class="olegend" id="olegend"></div>
@@ -141,10 +141,10 @@
   <span id="fLeft" class="fside"></span>
   <span id="fMid" class="muted"></span>
   <span class="fside fright">
-    <button class="sq small" id="z100" aria-label="Vrati na 100%"><svg class="icon"><use href="#i-zoom-reset"/></svg></button>
-    <button class="sq small" id="zOut" aria-label="Umanji"><svg class="icon"><use href="#i-minus"/></svg></button>
+    <button class="sq small" id="z100" aria-label="Back to 100%"><svg class="icon"><use href="#i-zoom-reset"/></svg></button>
+    <button class="sq small" id="zOut" aria-label="Zoom out"><svg class="icon"><use href="#i-minus"/></svg></button>
     <button class="ghost zval" id="zVal">100%</button>
-    <button class="sq small" id="zIn" aria-label="Uvećaj"><svg class="icon"><use href="#i-plus"/></svg></button>
+    <button class="sq small" id="zIn" aria-label="Zoom in"><svg class="icon"><use href="#i-plus"/></svg></button>
   </span>
 </footer>
 

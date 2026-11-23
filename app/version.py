@@ -1,8 +1,8 @@
 """VAJB version 1.0 (PRAVILA.md V1). Copy into the app and set APP_NAME; bump VERSION with every push."""
 from pathlib import Path
 
-APP_NAME = "PDFabrika"
-VERSION = "0.1.17"
+APP_NAME = "PDFactory"
+VERSION = "0.2.0"
 _GIT = Path(__file__).resolve().parent
 
 

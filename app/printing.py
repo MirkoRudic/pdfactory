@@ -66,7 +66,7 @@ def _run(job_id, doc, o):
         offx, offy = dc.GetDeviceCaps(win32con.PHYSICALOFFSETX), dc.GetDeviceCaps(win32con.PHYSICALOFFSETY)
         copies = max(1, int(o.get("copies", 1)))
         j["total"] = doc.page_count * copies
-        dc.StartDoc(o.get("title", "PDFabrika"))
+        dc.StartDoc(o.get("title", "PDFactory"))
         for _ in range(copies):
             for page in doc:
                 landscape_page = page.rect.width > page.rect.height
@@ -96,5 +96,5 @@ def _run(job_id, doc, o):
     except Exception as e:
         log.exception("print failed")
         j["state"] = "greška"
-        j["error"] = "Štampa nije uspela. Proveri da li je štampač uključen." if "printer" in str(e).lower() else \
-            "Štampa nije uspela. Detalji su u dnevniku."
+        j["error"] = "Printing failed. Check that the printer is on." if "printer" in str(e).lower() else \
+            "Printing failed. Details are in the log."

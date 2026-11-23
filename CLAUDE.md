@@ -1,12 +1,12 @@
 Važe pravila iz `D:\VAJB\vajb-osnova\PRAVILA.md`. Ovde su arhitektura, zamke i izuzeci.
 
-# PDFabrika
+# PDFactory (ranije PDFabrika)
 
 Lokalna zamena za Adobe Reader: čitanje, pretraga, izmene (tekst, ispravka postojećeg teksta, isticanje, oblici, slike, formulari), strane (spajanje, redosled, okretanje, brisanje, izdvajanje, deljenje), OCR, štampa.
 Port **8802**, folder `D:\VAJB\pdfabrika`, Python u `.venv`.
 
 ## Arhitektura
-- `PDFabrika.pyw` — pokretač (Edge `--app` + ikonica pored sata). Argument putanja = otvori fajl (dvoklik na PDF); `--tiho` = start sa Windows-om bez prozora; `--instaliraj`; `--restart`.
+- `PDFactory.pyw` — pokretač (`PDFabrika.pyw` je samo prelaz sa starog imena: stare prečice i ažuriranje iz 0.1.x ga zovu) (Edge `--app` + ikonica pored sata). Argument putanja = otvori fajl (dvoklik na PDF); `--tiho` = start sa Windows-om bez prozora; `--instaliraj`; `--restart`.
 - `app/main.py` — FastAPI. Stanje servera su samo otvoreni izvori (`pdfops.SOURCES`, PDF u memoriji) i ubačene slike (`pdfops.IMAGES`).
 - `app/pdfops.py` — PyMuPDF: render, tekst, pretraga, `compose()` (radni prostor → novi PDF sa izmenama), OCR.
 - `app/static/app.js` — ceo UI. Radni prostor (dokument) živi u pregledaču: `items` (strane: izvor, broj strane, dodatna rotacija, uid), `objects` (izmene po uid strane), `forms`. Čuva se u localStorage, pa slučajno zatvoren prozor ne gubi izmene (server radi dalje).
@@ -15,8 +15,8 @@ Port **8802**, folder `D:\VAJB\pdfabrika`, Python u `.venv`.
 - OCR: PyMuPDF ima ugrađen Tesseract, treba mu samo `tessdata` (`pdfabrika/tessdata`: eng iz repoa, srp i srp_latn kopira instalacija iz `kontrolaizbora\podaci\ocr\tessdata`). Dodaje se nevidljiv sloj teksta (render_mode 3), slika strane se ne menja.
 - Štampa: `app/printing.py`, pywin32/GDI, sopstveni prozor u app (bez Windows dijaloga štampe).
 - Windows: `app/winsetup.py` — prečica, Startup prečica (`--tiho`), registracija kao PDF program (HKCU, `PDFabrika.PDF`), otvaranje stranice Podrazumevane aplikacije. Osvežava se pri svakom pokretanju. Ikonica programa `assets/pdfabrika.ico`, ikonica .pdf fajlova `assets/pdf_fajl.ico` (bela strana, crvena ivica, fabrika sa PDF).
-- `PDFabrika.exe` (u `.venv\Scripts`) = kopija venv `pythonw.exe` sa našom ikonicom (pywin32 resource API). Windows ime i ikonicu programa uzima iz .exe-a; sa pythonw.exe piše „Python“. Ako kopija ne pokrene venv (provera pri pravljenju), koristi se pythonw.exe.
-- Instalacija: `Instaliraj.vbs` → `instaliraj.pyw` (sistemski Python, tkinter prozor sa napretkom, brava protiv duplog pokretanja) → `.venv`, paketi, srp tessdata → `PDFabrika.pyw --instaliraj`.
+- `PDFactory.exe` (u `.venv\Scripts`) = kopija venv `pythonw.exe` sa našom ikonicom (pywin32 resource API). Windows ime i ikonicu programa uzima iz .exe-a; sa pythonw.exe piše „Python“. Ako kopija ne pokrene venv (provera pri pravljenju), koristi se pythonw.exe.
+- Instalacija: `Instaliraj.vbs` → `instaliraj.pyw` (sistemski Python, tkinter prozor sa napretkom, brava protiv duplog pokretanja) → `.venv`, paketi, srp tessdata → `PDFactory.pyw --instaliraj`.
 
 ## Zamke (izmereno)
 - Prva instalacija bez prozora (cmd umanjen) izgleda kao da ništa ne radi; drugi dvoklik je pokretao drugu instalaciju paralelno i pip je pucao (0.1.0). Zato prozor napretka i brava.
@@ -44,6 +44,10 @@ Port **8802**, folder `D:\VAJB\pdfabrika`, Python u `.venv`.
 - Podrazumevani program se čita preko `AssocQueryString` (ASSOCSTR_PROGID), ne iz registra: noviji Windows 11 drži izbor u `UserChoiceLatest\\ProgId`, pa je PDFabrika pisala da nije podrazumevana iako jeste. Promena vrednosti se upisuje u dnevnik.
 
 ## Izuzeci od pravila
+- T1, T3: UI je na engleskom (Mirko, 23.11.2026), brojevi engleski (`1,200.50`). Komentari i CLAUDE.md ostaju kako jesu.
+- Unutrašnja imena ostaju stara: ProgID `PDFabrika.PDF`, ključ `RegisteredApplications\PDFabrika`, health `pdfabrika` (prihvata se i `pdfactory`), localStorage `pdfabrika.*`. Izbor podrazumevanog programa je u Windows-u vezan za ProgID — promena bi ga poništila.
+- Licenca: AGPL 3.0 zbog PyMuPDF (`LICENSE`, Settings → About).
+- Za drugare: zip bez `.git`, `.venv`, `data`, sa srp tessdata; `Instaliraj.vbs` instalira Python preko winget ako ga nema. Bez `.git` nema dugmeta za ažuriranje.
 - UI4: Otvori / Sačuvaj kao / izbor foldera koriste standardni Windows prozor (tkinter) — potrebna je prava putanja fajla.
 - O1: nema Windows obaveštenja; OCR i štampa pokazuju napredak u prozoru.
 

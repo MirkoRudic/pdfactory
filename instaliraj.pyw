@@ -1,8 +1,8 @@
-"""PDFabrika - instalacija sa prozorom napretka (pokreće je Instaliraj.vbs sistemskim Python-om).
+"""PDFactory - setup with a progress window (Instaliraj.vbs starts it with the system Python).
 
-Koraci: .venv -> paketi -> srpski OCR jezici -> PDFabrika.pyw --instaliraj (prečica, start sa Windows-om,
-PDF program) i otvaranje aplikacije. Drugi dvoklik dok instalacija radi samo vrati ovaj prozor napred.
-Izlaz svih koraka ide u data/logs/instalacija.log (dopisuje se).
+Steps: .venv -> packages -> Serbian OCR languages -> PDFactory.pyw --instaliraj (shortcut, start with Windows,
+PDF app) and the app opens. A second double click while setup runs only brings this window to the front.
+Output of every step goes to data/logs/instalacija.log (appended).
 """
 import os
 import shutil
@@ -24,7 +24,7 @@ PY = VENV / "Scripts" / "python.exe"
 PYW = VENV / "Scripts" / "pythonw.exe"
 OCR_SRC = Path(r"D:\VAJB\kontrolaizbora\podaci\ocr\tessdata")
 NOWIN = 0x08000000
-TITLE = "PDFabrika - instalacija"
+TITLE = "PDFactory - setup"
 BG, FG, MUTED, ACCENT, RED = "#121316", "#e8e9eb", "#9a9ea6", "#d9a441", "#e5484d"
 
 
@@ -68,8 +68,8 @@ def run(cmd, status):
             f.write(line)
             t = line.strip()
             if t.startswith(("Collecting", "Downloading", "Installing collected")):
-                status(t.replace("Collecting", "Preuzimam").replace("Downloading", "Preuzimam")
-                       .replace("Installing collected packages:", "Instaliram:")[:70])
+                status(t.replace("Collecting", "Downloading").replace("Downloading", "Downloading")
+                       .replace("Installing collected packages:", "Installing:")[:70])
     return p.wait()
 
 
@@ -89,8 +89,8 @@ class Win:
         st.theme_use("clam")
         st.configure("A.Horizontal.TProgressbar", troughcolor="#2a2d33", background=ACCENT, bordercolor=BG,
                      lightcolor=ACCENT, darkcolor=ACCENT)
-        tk.Label(self.r, text="PDFabrika", bg=BG, fg=FG, font=("Segoe UI Semibold", 15)).pack(pady=(26, 6))
-        self.msg = tk.Label(self.r, text="Pripremam…", bg=BG, fg=MUTED, font=("Segoe UI", 10), wraplength=400)
+        tk.Label(self.r, text="PDFactory", bg=BG, fg=FG, font=("Segoe UI Semibold", 15)).pack(pady=(26, 6))
+        self.msg = tk.Label(self.r, text="Preparing…", bg=BG, fg=MUTED, font=("Segoe UI", 10), wraplength=400)
         self.msg.pack()
         self.bar = ttk.Progressbar(self.r, style="A.Horizontal.TProgressbar", length=400, maximum=100)
         self.bar.pack(pady=18)
@@ -111,7 +111,7 @@ class Win:
     def fail(self, text):
         def f():
             self.status(text, 0, RED)
-            for label, fn in (("Otvori dnevnik", lambda: os.startfile(LOG)), ("Zatvori", self.r.destroy)):
+            for label, fn in (("Open log", lambda: os.startfile(LOG)), ("Close", self.r.destroy)):
                 tk.Button(self.btns, text=label, command=fn, bg="#1a1c20", fg=FG, activebackground="#2a2d33",
                           activeforeground=FG, relief="flat", padx=14, pady=4, bd=0).pack(side="left", padx=6)
         self.r.after(0, f)
@@ -121,30 +121,30 @@ def work(w: Win):
     try:
         log("=== instalacija ===")
         if not PY.exists():
-            w.status("Pravim Python okruženje…", 5)
+            w.status("Creating the Python environment…", 5)
             w.busy()
             base = Path(sys.executable).with_name("python.exe")
             if run([base if base.exists() else sys.executable, "-m", "venv", VENV], w.status):
-                return w.fail("Python okruženje nije napravljeno.")
-        w.status("Instaliram pakete (prvi put traje 1–3 minuta)…", 20)
+                return w.fail("The Python environment was not created.")
+        w.status("Installing packages (1–3 minutes the first time)…", 20)
         w.busy()
         run([PY, "-m", "pip", "install", "--upgrade", "pip", "-q"], w.status)
         if run([PY, "-m", "pip", "install", "-r", APP / "requirements.txt"], w.status):
-            return w.fail("Paketi nisu instalirani. Pošalji Claude-u dnevnik.")
-        w.status("Jezici za prepoznavanje teksta…", 85)
+            return w.fail("Packages were not installed. Send the log to Claude.")
+        w.status("Text recognition languages…", 85)
         for name in ("srp.traineddata", "srp_latn.traineddata"):
             if (OCR_SRC / name).exists() and not (APP / "tessdata" / name).exists():
                 shutil.copy2(OCR_SRC / name, APP / "tessdata" / name)
                 log(f"copied {name}")
-        w.status("Prečica, start sa Windows-om, PDF program…", 95)
-        subprocess.Popen([str(PYW), str(APP / "PDFabrika.pyw"), "--instaliraj"], cwd=APP)
-        log("PDFabrika.pyw --instaliraj started")
-        w.status("Gotovo. PDFabrika se otvara.", 100, ACCENT)
+        w.status("Shortcut, start with Windows, PDF app…", 95)
+        subprocess.Popen([str(PYW), str(APP / "PDFactory.pyw"), "--instaliraj"], cwd=APP)
+        log("PDFactory.pyw --instaliraj started")
+        w.status("Done. PDFactory is opening.", 100, ACCENT)
         time.sleep(2.5)
         w.r.after(0, w.r.destroy)
     except Exception as e:
         log(f"ERROR {e!r}")
-        w.fail("Instalacija nije uspela. Pošalji Claude-u dnevnik.")
+        w.fail("Installation failed. Send the log to Claude.")
 
 
 def main():
