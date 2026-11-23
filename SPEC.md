@@ -1,0 +1,100 @@
+# PDFactory — specifikacija
+
+Šta aplikacija radi, iz ugla korisnika. Svaka izmena se prvo upiše ovde, pa u kod.
+Oblik scenarija: **kad uradim X → desi se Y**. Tehnika i zamke su u `CLAUDE.md`.
+
+## Svrha
+Lokalna, besplatna zamena za Adobe Reader na Windows-u: čitanje, izmene, strane, OCR, štampa. Sve radi na računaru, bez naloga i interneta (internet samo za proveru nove verzije).
+
+## Za koga
+Mirko i drugari kojima pošalje instalaciju. Korisnik ne zna ništa o Python-u, git-u ni portovima.
+
+---
+
+## 1. Instalacija i Windows
+
+- Dvoklik na `PDFactory-Setup.exe` → pravi čarobnjak sa ikonicom: izbor foldera, prečice, start sa Windows-om, podrazumevani PDF program. Bez cmd prozora, bez administratorskih prava.
+- Windows pri prvom dvokliku jednom pita „Open“ (nepotpisan fajl) → to je jedino pitanje van čarobnjaka.
+- Deinstalacija (Windows → Aplikacije) → briše program, prečice, registraciju i `data`.
+- Start sa Windows-om uključen → app se pokrene bez prozora, samo ikonica pored sata.
+- Dvoklik na PDF (kad je podrazumevani) → fajl se otvori u PDFactory; ako app već radi, otvori se u istom prozoru.
+- Ime i ikonica u Windows-u su „PDFactory“ (nikad „Python“). PDF fajlovi imaju svoju ikonicu: bela strana, crvena ivica, fabrika sa „PDF“.
+- Settings → Windows → „Set as default“ → Windows prozor za izbor se otvori **ispred** app; posle izbora Settings sam pokaže „PDFactory is the default“.
+- Server se ne pokrene za 15 s → fajl se otvori u Edge-u, da korisnik ne ostane bez ičega.
+
+## 2. Otvaranje i čitanje
+
+- Open (krajnje levo u zaglavlju), Ctrl+O, prevlačenje fajla, nedavni fajlovi na početnom ekranu → dokument se otvori.
+- Pri otvaranju zum je „Automatski“: prva strana stane po širini, najviše 100%. Strana je centrirana i vodoravno.
+- Dugme 100% pored − i + → odmah vraća na 100%. Ctrl+plus / Ctrl+minus / Ctrl+0 rade isto.
+- Pretraga (Ctrl+F, F3 sledeće) → pogoci istaknuti, skok na stranu.
+- Skenirane strane bez teksta → OCR sam krene u pozadini (srpska latinica, ćirilica, engleski). U podnožju piše „Recognizing text x%“. Nema podešavanja ni dugmeta. Dokument zbog OCR-a **ne** postaje izmenjen.
+- Slučajno zatvoren prozor → pri ponovnom otvaranju sve izmene su tu.
+
+## 3. Izmene (Edit)
+
+Alati: Select and move, Add text, Edit text, Highlight, Shape, Image, Fill form.
+
+- **Add text**: klik na stranu → okvir za kucanje. Ništa ne ukucam i kliknem dalje → na strani **ne ostaje ništa** (ni natpis „Tekst“) i nema koraka za Undo.
+- Izbor fonta → svi instalirani fontovi, svaki prikazan svojim izgledom; veličina, boja, podebljano, kurziv, poravnanje.
+- **Edit text**: klik na postojeći tekst → menja se cela linija, istim (ili najbližim) fontom i veličinom. Linija ostaje jedna linija, susedne linije ostaju netaknute. Radi i na PDF-ovima sa pogrešno mapiranim slovima (Canva, Acrobat): u polju je tekst kakav se vidi na strani, ne „drfave“.
+- **Highlight**: providan pravougaonik, ispravan i na okrenutim stranama.
+- **Shape**: pravougaonik, elipsa, linija, strelica; boja, debljina, ispuna.
+- **Image**: ubaci sliku → pomeranje, promena veličine, sečenje (crop), okretanje pod bilo kojim uglom, preslikavanje, providnost, iza teksta.
+- **Fill form**: polja formulara se popunjavaju na strani.
+- Prvi klik na element ga izabere; klik na već izabran tekst-okvir počinje kucanje.
+- Esc → poništi izbor. Delete → obriše izabrani element. Strelice → pomeraju ga. Ctrl+C/X/V/D → kopiraj, iseci, nalepi, dupliraj.
+- Edge ne nudi „Help me write“ nad poljima.
+
+## 4. Strane (Pages)
+
+- Prevlačenje → novi redosled. Okretanje, brisanje, izdvajanje u novi PDF, deljenje po opsegu (npr. `1-3, 5`), dodavanje drugog PDF-a ili slike.
+- Ctrl+A → izabere sve strane.
+
+## 5. Undo / Redo
+
+- Dugmad su levo u zaglavlju, odmah posle Open. Ctrl+Z / Ctrl+Y (ili Ctrl+Shift+Z).
+- Važe za **sve**: izmene na strani, brisanje i premeštanje strana, okretanje, formulare.
+
+## 6. Čuvanje i štampa
+
+- Ctrl+S / Save → upiše se u isti fajl; prethodna verzija ide u rezervu (poslednjih 20). Save as → standardni Windows prozor.
+- Štampa (Ctrl+P) → sopstveni prozor u app: štampač, strane, broj kopija, boja/sivo, obostrano, 1 ili 2 strane po listu, uklopi ili stvarna veličina. Napredak se vidi u prozoru.
+
+## 7. Settings
+
+- **Appearance**: tamna / svetla tema.
+- **Windows**: start sa Windows-om (prekidač), podrazumevani program (stanje + dugme).
+- **Log**: pregled i brisanje dnevnika.
+- **About**: kako app radi, šta koristi, „Made by Mirko with Claude Opus 5.5 (Anthropic)“, licence (AGPL 3.0 + komponente), **Report a problem**.
+- **Version**: „Check and update“ → jedan klik proveri i odmah ažurira; posle ponovnog otvaranja piše „Updated: x.y.z“.
+- Nema liste prečica ni OCR podešavanja.
+
+## 8. Ažuriranje (instalirana kopija)
+
+- Postoji nova verzija → mala, diskretna traka „New version“. Klik → preuzme i instalira bez čarobnjaka, app se sama zatvori i ponovo otvori, izmene u radu ostaju.
+- Nema interneta → ništa se ne prikazuje, nema greške.
+
+## 9. Prijava problema
+
+- Report a problem → polje za opis + (uključeno) dnevnik. Korisnik **vidi tačno šta se šalje**.
+- U dnevniku nema dokumenata, sadržaja ni imena fajlova i putanja (zamenjeni sa `<file>` / `<path>`).
+- Send → otvori se mejl program sa popunjenim mejlom za Mirka; korisnik sam klikne Pošalji. Predugačak tekst ide i u clipboard.
+
+## 10. Izgled
+
+- Zaglavlje: levo Open | Undo Redo; sredina Read / Edit / Pages; desno Save, Print, Settings, Quit. Bez logoa i imena u zaglavlju.
+- Crvena boja (Acrobat stil), simetrično i poravnato. UI na engleskom, brojevi `1,200.50`.
+- Quit iz app ili ikonice pored sata sa neizmenjenim dokumentom → izlaz; sa izmenjenim → pita.
+
+---
+
+## Namerno ne radi (non-goals)
+- Beleške (sticky notes), crtanje rukom, potpis, „pokrij“ (redakcija kao alat).
+- Nalozi, oblak, sinhronizacija, telemetrija, slanje dokumenata bilo kome.
+- OCR podešavanja, lista prečica u Settings.
+- Mac i Linux (za sada samo Windows).
+- Windows obaveštenja (napredak je u prozoru app).
+
+## Otvoreno (nije potvrđeno na pravom Windows-u)
+Štampa, Windows prozori za otvaranje/čuvanje, installer i deinstalacija, tiho ažuriranje, gašenje Edge „Help me write“.

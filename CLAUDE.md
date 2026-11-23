@@ -1,4 +1,4 @@
-Važe pravila iz `D:\VAJB\vajb-osnova\PRAVILA.md`. Ovde su arhitektura, zamke i izuzeci.
+Važe pravila iz `D:\VAJB\vajb-osnova\PRAVILA.md`. Ovde su arhitektura, zamke i izuzeci. Šta app radi iz ugla korisnika je u `SPEC.md` — svaka izmena ponašanja prvo tamo.
 
 # PDFactory (ranije PDFabrika)
 
