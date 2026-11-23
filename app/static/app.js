@@ -189,6 +189,8 @@ function setMode(m) {
   if (m === "edit" && S.hits.length) { S.hits = []; S.hit = -1; $("#q").value = ""; $("#qn").textContent = ""; }
   if (m !== "edit") S.tool = "select";
   renderAll();
+  const d = D();
+  if (m !== "pages") requestAnimationFrame(() => scrollToPage(d.curPage || 0));   // UI2: same page in every mode
 }
 function renderAll() {
   const d = D();

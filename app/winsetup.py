@@ -24,17 +24,29 @@ def pythonw() -> str:
 
 
 def _ps(script: str) -> bool:
-    r = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
-                       capture_output=True, text=True, creationflags=NOWIN, timeout=60)
+    """Runs a PowerShell script from a file in data/tmp (quotes in -Command get mangled by Windows)."""
+    import tempdir
+    f = tempdir.file(".ps1", "ps")
+    f.write_text(script, encoding="utf-8-sig")
+    try:
+        r = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(f)],
+                           capture_output=True, text=True, creationflags=NOWIN, timeout=60)
+    finally:
+        f.unlink(missing_ok=True)
     if r.returncode:
         log.error("powershell: %s", (r.stderr or r.stdout)[-400:])
     return r.returncode == 0
 
 
 def _shortcut(lnk: Path, args: str = ""):
-    s = (f'$s=(New-Object -ComObject WScript.Shell).CreateShortcut("{lnk}");'
-         f'$s.TargetPath="{pythonw()}";$s.Arguments=\'"{LAUNCHER}" {args}\';'
-         f'$s.WorkingDirectory="{APP_DIR}";$s.IconLocation="{ICON},0";$s.Description="PDFabrika";$s.Save()')
+    q = lambda v: str(v).replace("'", "''")        # PowerShell single-quoted strings
+    s = (f"$s = (New-Object -ComObject WScript.Shell).CreateShortcut('{q(lnk)}')\n"
+         f"$s.TargetPath = '{q(pythonw())}'\n"
+         f"$s.Arguments = '\"{q(LAUNCHER)}\" {q(args)}'\n"
+         f"$s.WorkingDirectory = '{q(APP_DIR)}'\n"
+         f"$s.IconLocation = '{q(ICON)},0'\n"
+         f"$s.Description = 'PDFabrika'\n"
+         "$s.Save()\n")
     return _ps(s)
 
 

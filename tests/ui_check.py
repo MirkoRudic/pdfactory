@@ -10,7 +10,7 @@ with sync_playwright() as pw:
     pg = b.new_page(viewport={"width": 1440, "height": 900})
     pg.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
     pg.on("pageerror", lambda e: errors.append(str(e)))
-    pg.goto(url); pg.wait_for_timeout(1200)
+    pg.goto(url); pg.evaluate("localStorage.clear()"); pg.reload(); pg.wait_for_timeout(1200)
     pg.screenshot(path=f"{out}/0_start.png")
     post("api/open-external", {"path": pdf}); pg.wait_for_timeout(2500)
     pg.screenshot(path=f"{out}/1_read.png")

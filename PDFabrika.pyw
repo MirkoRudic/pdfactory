@@ -215,7 +215,9 @@ def stop_old():
 
 
 def install():
+    import tempdir
     import winsetup
+    tempdir.init(DATA / "tmp")
     winsetup.install()
     log.info("installed")
 
