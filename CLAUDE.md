@@ -41,6 +41,8 @@ Port **8802**, folder `D:\VAJB\pdfabrika`, Python u `.venv`.
 - Edge prozor app nudi „Ask Edge to help me write“ nad tekst-okvirima: `writingsuggestions="false"` na `<html>` + `--disable-features` sa poznatim imenima Edge funkcija (imena nisu dokumentovana; nije potvrđeno koje deluje).
 - Prvi klik na tekst-okvir ga samo izabere (Delete ga briše), klik na već izabran okvir počinje kucanje.
 
+- Podrazumevani program se čita preko `AssocQueryString` (ASSOCSTR_PROGID), ne iz registra: noviji Windows 11 drži izbor u `UserChoiceLatest\\ProgId`, pa je PDFabrika pisala da nije podrazumevana iako jeste. Promena vrednosti se upisuje u dnevnik.
+
 ## Izuzeci od pravila
 - UI4: Otvori / Sačuvaj kao / izbor foldera koriste standardni Windows prozor (tkinter) — potrebna je prava putanja fajla.
 - O1: nema Windows obaveštenja; OCR i štampa pokazuju napredak u prozoru.

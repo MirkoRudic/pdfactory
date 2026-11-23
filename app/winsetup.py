@@ -227,14 +227,26 @@ _FILEEXTS = r"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pdf"
 
 
 def current_default() -> str:
-    """ProgId Windows uses for .pdf. Newer Windows 11 keeps it in UserChoiceLatest, older in UserChoice."""
+    """ProgId Windows really uses for .pdf. Asked from the shell (AssocQueryString), which knows every
+    Windows 11 variant; the registry (UserChoiceLatest\\ProgId, UserChoiceLatest, UserChoice) is the fallback."""
     if not WIN:
         return ""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        f = ctypes.windll.shlwapi.AssocQueryStringW
+        f.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)]
+        n = wintypes.DWORD(512)
+        buf = ctypes.create_unicode_buffer(512)
+        if f(0, 20, ".pdf", None, buf, ctypes.byref(n)) == 0 and buf.value:   # ASSOCSTR_PROGID
+            return buf.value
+    except Exception:
+        log.exception("AssocQueryString")
     import winreg
-    for sub in ("UserChoiceLatest", "UserChoice"):
+    for sub, name in (("UserChoiceLatest\\ProgId", "ProgId"), ("UserChoiceLatest", "ProgId"), ("UserChoice", "ProgId")):
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _FILEEXTS + "\\" + sub) as k:
-                v = winreg.QueryValueEx(k, "ProgId")[0]
+                v = winreg.QueryValueEx(k, name)[0]
                 if v:
                     return v
         except OSError:
@@ -243,7 +255,16 @@ def current_default() -> str:
 
 
 def is_default() -> bool:
-    return current_default() == PROGID
+    cur = current_default()
+    ok = cur == PROGID or "pdfabrika" in cur.lower()     # also "Applications\\PDFabrika.exe" (chosen via "Open with")
+    global _last_default
+    if cur != _last_default:          # logged once per change, the settings window asks every 1.5 s
+        log.info("PDF default is %r", cur)
+        _last_default = cur
+    return ok
+
+
+_last_default = None
 
 
 def _front_settings_window(timeout=8.0):
