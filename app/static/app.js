@@ -561,11 +561,6 @@ function renderPanel() {
   else if (kind === "mark") propsMark(box, o || S.def.mark);
   else if (kind === "image" && o) propsImage(box, o);
   if (box.childElementCount) { P.appendChild(sep()); P.appendChild(box); }
-  else if (!o && S.tool === "select") {
-    P.appendChild(sep());
-    P.appendChild(Object.assign(document.createElement("p"), { className: "tool-hint",
-      textContent: "Click a text, image or shape you added to select it. Drag to move it, drag a corner to resize." }));
-  }
   if (o) {
     P.appendChild(sep());
     const r = row(2);

@@ -35,7 +35,7 @@ Windows 10/11 korisnik bez tehničkog znanja: ne zna za Python, git ni portove, 
 
 ## 3. Izmene (Edit)
 
-Alati: Move and resize (uz kratko objašnjenje u panelu), Add text, Edit text, Highlight, Shape, Image, Fill form.
+Alati: Move and resize, Add text, Edit text, Highlight, Shape, Image, Fill form.
 
 - **Add text**: klik na stranu → okvir za kucanje. Ništa ne ukucam i kliknem dalje → na strani **ne ostaje ništa** (ni natpis „Tekst“) i nema koraka za Undo.
 - Izbor fonta → svi instalirani fontovi, svaki prikazan svojim izgledom; veličina, boja, podebljano, kurziv, poravnanje.

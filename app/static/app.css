@@ -257,5 +257,4 @@ button.link:hover { text-decoration: underline; background: none; }
 .ctxm svg { width: 16px; height: 16px; }
 .thumb.drop-t { box-shadow: 0 -3px 0 var(--accent); }
 .thumb.drop-b { box-shadow: 0 3px 0 var(--accent); }
-.tool-hint { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .ctxm button:disabled { opacity: .4; cursor: default; background: transparent; }
