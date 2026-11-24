@@ -36,6 +36,11 @@ function formatDate(iso) {
   return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
 }
 
+function formatTime(d) {
+  const p = (n) => String(n).padStart(2, "0");
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 // ---------- api ----------
 async function api(path, opt = {}) {
   const o = { method: opt.body !== undefined || opt.form ? "POST" : (opt.method || "GET"), headers: {} };
@@ -1317,14 +1322,13 @@ async function settingsDlg() {
       info.innerHTML = `<span>${esc(s.version)}</span><span class="ver-st"></span>`;
       vr.appendChild(info);
       const st = $(".ver-st", info);
-      const hhmm = (d) => d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
       let vb = null;
       const paint = () => {                     // state of the last check, automatic or by hand
         const u = S.upd; if (!u) { st.innerHTML = '<span class="muted">Checking…</span>'; return; }
         const nova = u.r.ok && (u.r.behind || u.r.restart);
-        st.innerHTML = !u.r.ok ? `<span class="muted">Check failed · ${hhmm(u.at)}</span>`
+        st.innerHTML = !u.r.ok ? `<span class="muted">Check failed · ${formatTime(u.at)}</span>`
           : nova ? `<span class="accent">New version ${esc(u.r.version || "")}</span><span class="muted">· installs by itself when PDFactory is closed</span>`
-          : `<span class="ok">${icon("check")}Up to date</span><span class="muted">· checked ${hhmm(u.at)}</span>`;
+          : `<span class="ok">${icon("check")}Up to date</span><span class="muted">· checked ${formatTime(u.at)}</span>`;
         if (vb) vb.innerHTML = nova ? icon("download") + "Update now" : icon("refresh") + "Check for updates";
         if (vb) vb.classList.toggle("primary", !!nova);
       };

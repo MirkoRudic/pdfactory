@@ -56,8 +56,10 @@ Port **8802**, folder `D:\VAJB\pdfactory`, repo `MirkoRudic/pdfactory`, Python u
 - Licenca: AGPL 3.0 zbog PyMuPDF (`LICENSE`, Settings → About).
 - Deljenje: `PDFactory-Setup.exe` pravi GitHub Actions (`.github/workflows/setup.yml`, Inno Setup `packaging/setup.iss`) na svaki push: svoj Python (embeddable + tkinter iz punog), `python\PDFactory.exe` sa ikonicom (rcedit), srp tessdata, čarobnjak (folder, prečice, start sa Windows-om, podrazumevani PDF), deinstalacija (`--uninstall` briše registar). Gotov fajl je na grani `dist`. Instalirana kopija nema `.git` (bez ažuriranja iz app); `winsetup.INSTALLED` = postoji `python\PDFactory.exe`.
 - Ranije za drugare: zip bez `.git`, `.venv`, `data`, sa srp tessdata; `Install PDFactory.vbs` instalira Python preko winget ako ga nema. Fajl skinut sa interneta: Windows pri dvokliku jednom pita „Open“ (nepotpisan fajl); bez toga samo uz kupljen sertifikat za potpisivanje koda. Bez `.git` nema dugmeta za ažuriranje.
-- UI4: Otvori / Sačuvaj kao / izbor foldera koriste standardni Windows prozor (comdlg32 preko ctypes; tkinter nema u ugrađenom Python-u instalirane kopije) — potrebna je prava putanja fajla.
-- O1: nema Windows obaveštenja; OCR i štampa pokazuju napredak u prozoru.
+
+## Napomene
+- Otvori / Sačuvaj kao / folder: comdlg32 preko ctypes (tkinter nema u ugrađenom Python-u instalirane kopije); po UI4 dozvoljeno.
+- OCR i štampa: napredak u prozoru, bez Windows obaveštenja (O1).
 
 ## Testovi
 `python tests/test_pdfops.py` (bez pregledača), `tests/ui_check.py` i `tests/ui_flow.py` (Playwright, server na 8802).
