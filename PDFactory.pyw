@@ -300,7 +300,8 @@ def main():
     if path:
         post("api/open-external", {"path": path})
     threading.Thread(target=refresh_windows_setup, name="windows-setup", daemon=True).start()
-    if "--tiho" not in flags:
+    # after a silent update the installer starts us with --updated: the old window is still open and reloads by itself
+    if "--tiho" not in flags and not ("--updated" in flags and app_windows()):
         open_window()
     if "--instaliraj" in flags:
         try:
@@ -330,6 +331,7 @@ def main():
             pystray.MenuItem("Open PDFactory", lambda i, _: (focus_window() or open_window()), default=True),
             pystray.MenuItem("Quit", ask_quit)))
         web.state.quit = lambda: quit_all(icon)
+        web.state.stop = lambda: (icon.stop(), os._exit(0))      # update: server only, the window waits and reloads
         icon.run()
     except Exception as e:
         log.warning("tray not available: %s", e)

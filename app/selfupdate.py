@@ -44,25 +44,33 @@ def check() -> dict:
 
 
 def clean(folder: Path):
-    """Installers of earlier updates are deleted at the next start."""
+    """At start: installers of versions that are already installed (a downloaded newer one stays for later)."""
     for p in Path(folder).glob("PDFactory-Setup-*.exe"):
-        try:
-            p.unlink()
-        except OSError:
-            pass
+        m = re.search(r"Setup-([\d.]+)\.exe$", p.name)
+        if not m or _num(m.group(1)) <= _num(version.VERSION):
+            try:
+                p.unlink()
+            except OSError:
+                pass
 
 
-def apply(tmp_dir: Path) -> dict:
+def download(tmp_dir: Path) -> Path | None:
+    """Downloads the latest Setup once (kept in data/updates until it is installed). None = nothing new or failed."""
     if not _latest:
         r = check()
         if not r.get("ok") or not _latest:
-            return {"ok": False, "error": "The update could not be found."}
+            return None
+    if _num(_latest["version"]) <= _num(version.VERSION):
+        return None
     Path(tmp_dir).mkdir(parents=True, exist_ok=True)
     dst = Path(tmp_dir) / f"PDFactory-Setup-{_latest['version']}.exe"
+    if dst.exists() and (not _latest.get("size") or dst.stat().st_size == _latest["size"]):
+        return dst
+    part = dst.with_suffix(".part")
     log.info("downloading %s", _latest["url"])
     try:
         req = urllib.request.Request(_latest["url"], headers={"User-Agent": "PDFactory"})
-        with urllib.request.urlopen(req, timeout=60) as r, open(dst, "wb") as f:
+        with urllib.request.urlopen(req, timeout=60) as r, open(part, "wb") as f:
             while True:
                 b = r.read(1 << 20)
                 if not b:
@@ -70,13 +78,44 @@ def apply(tmp_dir: Path) -> dict:
                 f.write(b)
     except Exception:
         log.exception("download failed")
-        return {"ok": False, "error": "Download failed. Check the internet connection."}
-    if _latest.get("size") and dst.stat().st_size != _latest["size"]:
-        log.error("download size %s != %s", dst.stat().st_size, _latest["size"])
-        return {"ok": False, "error": "Download failed. Try again."}
+        part.unlink(missing_ok=True)
+        return None
+    if _latest.get("size") and part.stat().st_size != _latest["size"]:
+        log.error("download size %s != %s", part.stat().st_size, _latest["size"])
+        part.unlink(missing_ok=True)
+        return None
+    os.replace(part, dst)
+    log.info("downloaded %s", dst.name)
+    return dst
+
+
+def ready(tmp_dir: Path) -> str:
+    """Version of a downloaded installer waiting to be installed, or ''."""
+    best = ""
+    for p in Path(tmp_dir).glob("PDFactory-Setup-*.exe"):
+        m = re.search(r"Setup-([\d.]+)\.exe$", p.name)
+        if m and _num(m.group(1)) > _num(version.VERSION) and (not best or _num(m.group(1)) > _num(best)):
+            best = m.group(1)
+    return best
+
+
+def run(setup: Path, tmp_dir: Path, relaunch: str = "window"):
+    """Runs the installer silently. relaunch: window = start the app again (the open window reloads),
+    tiho = start it in the tray only, none = do not start it (the user quit)."""
     app_dir = Path(__file__).resolve().parents[1]
-    args = [str(dst), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", f"/DIR={app_dir}"]
+    args = [str(setup), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", f"/DIR={app_dir}",
+            f"/RELAUNCH={relaunch}", f"/LOG={Path(tmp_dir) / 'setup.log'}"]   # the log says what went wrong, if anything
     log.info("running %s", " ".join(args))
-    flags = 0x00000008 | 0x00000200 if sys.platform == "win32" else 0     # DETACHED_PROCESS | NEW_PROCESS_GROUP
-    subprocess.Popen(args, cwd=str(tmp_dir), creationflags=flags, close_fds=True)
+    flags = 0x00000008 | 0x00000200 | 0x01000000 if sys.platform == "win32" else 0   # DETACHED | NEW_GROUP | BREAKAWAY_FROM_JOB
+    try:
+        subprocess.Popen(args, cwd=str(app_dir), creationflags=flags, close_fds=True)
+    except OSError:                      # breakaway not allowed in this job: without it
+        subprocess.Popen(args, cwd=str(app_dir), creationflags=flags & ~0x01000000, close_fds=True)
+
+
+def apply(tmp_dir: Path, relaunch: str = "window") -> dict:
+    setup = download(tmp_dir)
+    if not setup:
+        return {"ok": False, "error": "The update could not be downloaded. Check the internet connection."}
+    run(setup, tmp_dir, relaunch)
     return {"ok": True, "changed": True, "installer": True}

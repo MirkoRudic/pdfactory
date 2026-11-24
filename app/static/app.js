@@ -1323,9 +1323,9 @@ async function settingsDlg() {
         const u = S.upd; if (!u) { st.innerHTML = '<span class="muted">Checking…</span>'; return; }
         const nova = u.r.ok && (u.r.behind || u.r.restart);
         st.innerHTML = !u.r.ok ? `<span class="muted">Check failed · ${hhmm(u.at)}</span>`
-          : nova ? `<span class="accent">New version ${esc(u.r.version || "")}</span>`
+          : nova ? `<span class="accent">New version ${esc(u.r.version || "")}</span><span class="muted">· installs by itself when PDFactory is closed</span>`
           : `<span class="ok">${icon("check")}Up to date</span><span class="muted">· checked ${hhmm(u.at)}</span>`;
-        if (vb) vb.innerHTML = nova ? icon("download") + `Update to ${esc(u.r.version || "")}` : icon("refresh") + "Check for updates";
+        if (vb) vb.innerHTML = nova ? icon("download") + "Update now" : icon("refresh") + "Check for updates";
         if (vb) vb.classList.toggle("primary", !!nova);
       };
       if (s.git) {
@@ -1376,25 +1376,25 @@ async function checkUpd() {
   S.upd = { r, at: new Date() };
   return r;
 }
-function showUpdate(r) {
-  const b = bar("upd", `${icon("refresh")}<span>New version ${esc(r.version || "")}</span><button class="primary">Update</button>`);
-  $("button", b).onclick = () => doUpdate(r);
-}
 async function doUpdate(r) {
   if (S.docs.some((d) => d.dirty) && !(await vd.confirm("There are unsaved changes. Update now?", { ok: "Update" }))) return false;
   persist();                                   // open files and edits come back after the restart
   try { localStorage.setItem("pdfabrika.upd", r.version || ""); } catch (e) { /* no storage */ }
   bar("upd", `${icon("refresh")}<span>Updating to ${esc(r.version || "the new version")}…</span>`);
   const p = await safe(() => api("/api/update", { body: {} }));
-  if (p && p.ok) { setTimeout(waitRestart, 1500); return true; }
+  if (p && p.ok) {
+    if (p.installer) bar("upd", `${icon("refresh")}<span>Installing ${esc(r.version || "the update")}… PDFactory restarts by itself in a minute.</span>`);
+    setTimeout(waitRestart, 1500); return true;
+  }
   bar("upd", null);
   return false;
 }
 async function waitRestart() {
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 240; i++) {               // the installer of an installed copy takes up to a few minutes
     await new Promise((r) => setTimeout(r, 1000));
     try { const h = await (await fetch("/health")).json(); if (h.pid !== S.pid) { location.reload(); return; } } catch (e) { /* restarting */ }
   }
+  bar("upd", `${icon("alert")}<span>The update did not finish. Start PDFactory again.</span>`, "red");
 }
 async function checkDefault() {
   const r = await api("/api/default-check").catch(() => null);
@@ -1594,6 +1594,6 @@ async function pollInbox() {
   renderAll();
   pollInbox();
   checkDefault();
-  const auto = async () => { const r = await checkUpd(); if (r.ok && (r.behind || r.restart)) showUpdate(r); };
-  auto(); setInterval(auto, 3600 * 1000);
+  // V5: updates install by themselves in the background (no bar, no click); Settings shows the state
+  checkUpd(); setInterval(checkUpd, 3600 * 1000);
 })();

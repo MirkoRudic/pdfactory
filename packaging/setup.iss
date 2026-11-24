@@ -16,7 +16,6 @@ DefaultDirName={localappdata}\Programs\PDFactory
 DefaultGroupName=PDFactory
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
 SetupIconFile=..\assets\pdfabrika.ico
 UninstallDisplayIcon={app}\python\PDFactory.exe
 UninstallDisplayName=PDFactory
@@ -54,8 +53,9 @@ Name: "{userstartup}\PDFactory"; Filename: "{app}\python\PDFactory.exe"; Paramet
 ; the default app is chosen in Windows Settings; the app asks for it at its first start, with an explanation
 Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"" --want-default"; WorkingDir: "{app}"; Tasks: defaultapp; Flags: runhidden waituntilterminated; Check: not WizardSilent
 Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"""; WorkingDir: "{app}"; Description: "Open PDFactory"; Flags: postinstall nowait skipifsilent
-; update from inside the app (silent): start the new version again
-Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"""; WorkingDir: "{app}"; Flags: nowait; Check: WizardSilent
+; update from inside the app (silent, /RELAUNCH=window|tiho|none): start the new version again;
+; an open window reloads by itself (--updated), after a background update only the tray icon comes back (--tiho)
+Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"" --updated {code:RelaunchArgs}"; WorkingDir: "{app}"; Flags: nowait; Check: WizardSilent and Relaunch
 
 [UninstallRun]
 Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"" --uninstall"; WorkingDir: "{app}"; Flags: runhidden waituntilterminated; RunOnceId: "Unregister"
@@ -63,3 +63,14 @@ Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"" --u
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\data"
 Type: filesandordirs; Name: "{app}\app\__pycache__"
+
+[Code]
+function Relaunch: Boolean;
+begin
+  Result := ExpandConstant('{param:RELAUNCH|window}') <> 'none';
+end;
+
+function RelaunchArgs(Param: String): String;
+begin
+  if ExpandConstant('{param:RELAUNCH|window}') = 'tiho' then Result := '--tiho' else Result := '';
+end;

@@ -73,9 +73,11 @@ Alati: Select and move, Add text, Edit text, Highlight, Shape, Image, Fill form.
 - Nema liste prečica ni OCR podešavanja.
 - Sadržaj podešavanja i drugih prozora se ne pomera bočno (ni mišem, ni prevlačenjem, ni selekcijom); skroluje se samo uspravno.
 
-## 8. Ažuriranje (instalirana kopija)
+## 8. Ažuriranje (bez klikanja)
 
-- Postoji nova verzija → mala, diskretna traka „New version“. Klik → preuzme i instalira bez čarobnjaka, app se sama zatvori i ponovo otvori, izmene u radu ostaju.
+- Nova verzija se sama pronađe (na startu i svakog sata) i tiho preuzme u pozadini. Nema trake ni pitanja.
+- Instalira se sama kad nijedan prozor app nije otvoren (npr. posle starta sa Windows-om, app samo pored sata) ili kad korisnik ugasi app. Otvoren prozor se nikad ne zatvara zbog ažuriranja.
+- Settings → Version: „New version X · installs by itself when PDFactory is closed“ i dugme „Update now“ za one koji ne žele da čekaju (prozor ostaje, sam se osveži kad je nova verzija gotova).
 - Nema interneta → ništa se ne prikazuje, nema greške.
 
 ## 9. Izgled

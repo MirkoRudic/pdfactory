@@ -82,8 +82,9 @@ def pull():
     return res
 
 
-def restart():
-    """Starts the launcher with --restart in the background; it stops this server and starts the new code."""
-    log.info("restart")
-    subprocess.Popen([sys.executable, str(APP_DIR / LAUNCHER), "--restart"], cwd=APP_DIR,
+def restart(*extra: str):
+    """Starts the launcher with --restart in the background; it stops this server and starts the new code.
+    extra: e.g. "--tiho" when no window is open (background update)."""
+    log.info("restart %s", " ".join(extra))
+    subprocess.Popen([sys.executable, str(APP_DIR / LAUNCHER), "--restart", *extra], cwd=APP_DIR,
                      creationflags=NOWIN | DETACH, close_fds=True)

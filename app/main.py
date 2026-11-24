@@ -49,6 +49,7 @@ selfupdate.clean(DATA / "updates")
 app = FastAPI()
 app.state.quit = None
 ASK_QUIT = False               # tray menu "Quit": the window asks for confirmation (P4)
+SEEN = {"t": 0.0}               # last poll of an open app window (V5: updates install only when no window is open)
 INBOX: list[dict] = []          # files opened from outside (double click on a PDF) waiting for the window
 _inbox_lock = threading.Lock()
 
@@ -158,6 +159,7 @@ def open_external(body: dict = Body(...)):
 @app.get("/api/inbox")
 def inbox():
     global ASK_QUIT
+    SEEN["t"] = time.time()
     ask, ASK_QUIT = ASK_QUIT, False
     with _inbox_lock:
         items = INBOX[:]
@@ -490,7 +492,9 @@ def _disk_version() -> str:
 @app.get("/api/update")
 def update_check():
     if winsetup.INSTALLED:                       # installed copy: new versions are GitHub Releases
-        return selfupdate.check()
+        r = selfupdate.check()
+        r["ready"] = selfupdate.ready(DATA / "updates")
+        return r
     try:
         r = update.check()
     except Exception as e:
@@ -512,12 +516,73 @@ def update_pull():
     if winsetup.INSTALLED:
         r = selfupdate.apply(DATA / "updates")
         if r.get("ok"):                          # the installer replaces the files and starts the new version
-            threading.Timer(1.5, lambda: (app.state.quit() if app.state.quit else None, os._exit(0))).start()
+            # only the server stops: the window stays, says what is happening and reloads when the new version is up
+            threading.Timer(1.5, lambda: ((getattr(app.state, "stop", None) or (lambda: None))(), os._exit(0))).start()
         return r
     r = update.pull()
     if r.get("ok") and (r.get("changed") or _disk_version() != version.VERSION):
         threading.Timer(0.5, update.restart).start()
     return r
+
+
+# ---------- V5: silent updates in the background ----------
+# Found and downloaded by themselves; installed when no app window is open (tray only, e.g. after start with Windows)
+# or when the user quits. An open window is never closed for an update.
+def _window_open() -> bool:
+    return time.time() - SEEN["t"] < 300          # a minimized window still polls about once a minute
+
+
+def _update_on_quit():
+    try:
+        if winsetup.INSTALLED:
+            v = selfupdate.ready(DATA / "updates")
+            if v:
+                log.info("installing %s on quit", v)
+                selfupdate.run(DATA / "updates" / f"PDFactory-Setup-{v}.exe", DATA / "updates", relaunch="none")
+        elif (APP_DIR / ".git").exists():
+            r = update.check()
+            if r.get("ok") and r.get("behind"):
+                update.pull()                           # the next start runs the new code
+    except Exception:
+        log.exception("update on quit")
+
+
+def _auto_update():
+    time.sleep(90)
+    last_check = 0.0
+    while True:
+        try:
+            if time.time() - last_check > 3600:
+                last_check = time.time()
+                if winsetup.INSTALLED:
+                    selfupdate.check()
+                    selfupdate.download(DATA / "updates")       # quietly, once
+                    pending = bool(selfupdate.ready(DATA / "updates"))
+                else:
+                    r = update_check()
+                    pending = r.get("ok") and bool(r.get("behind") or r.get("restart"))
+                _auto_update.pending = pending
+            if getattr(_auto_update, "pending", False) and not _window_open():
+                if winsetup.INSTALLED:
+                    v = selfupdate.ready(DATA / "updates")
+                    log.info("background update to %s", v)
+                    selfupdate.run(DATA / "updates" / f"PDFactory-Setup-{v}.exe", DATA / "updates", relaunch="tiho")
+                    time.sleep(1.5)
+                    (getattr(app.state, "stop", None) or (lambda: None))()
+                    os._exit(0)
+                r = update.pull()
+                if r.get("ok"):
+                    log.info("background update (git)")
+                    update.restart("--tiho")
+                    return
+                _auto_update.pending = False
+        except Exception:
+            log.exception("background update")
+        time.sleep(60)
+
+
+if winsetup.WIN:
+    threading.Thread(target=_auto_update, name="auto-update", daemon=True).start()
 
 
 @app.post("/api/shutdown")
@@ -526,6 +591,7 @@ def shutdown():
 
     def stop():
         time.sleep(0.3)
+        _update_on_quit()
         if app.state.quit:
             app.state.quit()
         os._exit(0)
