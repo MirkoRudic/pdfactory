@@ -113,12 +113,32 @@ def close_windows():
         log.warning("close windows: %s", e)
 
 
+def edge_prefs(profile: Path):
+    """Edge settings for the app's own profile (P3), written while no app window is open (Edge rewrites the file on exit):
+    no mini menu over selected text (edge_quick_search.show_mini_menu, measured on 24.11.2026)."""
+    f = Path(profile) / "Default" / "Preferences"
+    try:
+        d = json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+        q = d.setdefault("edge_quick_search", {})
+        if q.get("show_mini_menu") is False:
+            return
+        q["show_mini_menu"] = False
+        f.parent.mkdir(parents=True, exist_ok=True)
+        tmp = f.with_suffix(".tmp")
+        tmp.write_text(json.dumps(d), encoding="utf-8")
+        os.replace(tmp, f)
+    except Exception as e:
+        log.warning("edge prefs: %s", e)
+
+
 def open_window():
     exe = edge()
     if not exe:
         import webbrowser
         webbrowser.open(URL)
         return
+    if not app_windows():
+        edge_prefs(DATA / "edge")
     subprocess.Popen([exe, f"--app={URL}", f"--user-data-dir={DATA / 'edge'}", "--no-first-run",
                       "--no-default-browser-check", "--disable-sync", "--start-maximized",
                       # no Edge writing assistant ("Ask Edge to help me write") over text boxes. Edge's feature

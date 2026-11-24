@@ -45,7 +45,7 @@ Alati: Select and move, Add text, Edit text, Highlight, Shape, Image, Fill form.
 - **Fill form**: polja formulara se popunjavaju na strani.
 - Prvi klik na element ga izabere; klik na već izabran tekst-okvir počinje kucanje.
 - Esc → poništi izbor. Delete → obriše izabrani element. Strelice → pomeraju ga. Ctrl+C/X/V/D → kopiraj, iseci, nalepi, dupliraj.
-- Edge ne nudi „Help me write“ nad poljima.
+- Edge ne nudi „Help me write“ nad poljima i ne pokazuje svoj meni nad označenim tekstom.
 
 ## 4. Strane (Pages)
 

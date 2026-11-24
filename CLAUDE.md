@@ -39,6 +39,7 @@ Port **8802**, folder `D:\VAJB\pdfactory`, repo `MirkoRudic/pdfactory`, Python u
 - OCR nema podešavanja ni dugme: strane sa slikom i bez teksta (`needsOcr`) se prepoznaju u pozadini čim se fajl otvori (srp_latn+srp+eng); dokument ne postaje „izmenjen“. Strana je zaključana samo dok se čita/piše, sam OCR ide bez brave (inače se strane ne iscrtavaju dok OCR radi).
 
 - Edge prozor app nudi „Ask Edge to help me write“ nad tekst-okvirima: `writingsuggestions="false"` na `<html>` + `--disable-features` sa poznatim imenima Edge funkcija (imena nisu dokumentovana; nije potvrđeno koje deluje).
+- Edge mini meni nad označenim tekstom: `edge_quick_search.show_mini_menu = false` u `data/edge/Default/Preferences` (izmereno 24.11.2026: Mirko kliknuo „Hide menu always“, pa poređenje fajla). Upisuje se pre otvaranja prozora kad nijedan prozor app nije otvoren (`edge_prefs`); Edge prepiše fajl pri gašenju.
 - Prvi klik na tekst-okvir ga samo izabere (Delete ga briše), klik na već izabran okvir počinje kucanje.
 
 - Podrazumevani program se čita preko `AssocQueryString` (ASSOCSTR_PROGID), ne iz registra: noviji Windows 11 drži izbor u `UserChoiceLatest\\ProgId`, pa je app pisala da nije podrazumevana iako jeste. Promena vrednosti se upisuje u dnevnik.
