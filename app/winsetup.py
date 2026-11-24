@@ -171,6 +171,22 @@ def set_autostart(on: bool):
     return True
 
 
+def _user_choice() -> str:
+    """The user's choice as Windows stored it (registry). AssocQueryString falls back to OpenWithProgids when that
+    ProgID is gone, so after removing the first name it reported PDFactory while Windows reset the choice to Acrobat
+    (measured 24.11.2026)."""
+    import winreg
+    for sub in ("UserChoiceLatest\\ProgId", "UserChoiceLatest", "UserChoice"):
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _FILEEXTS + "\\" + sub) as k:
+                v = winreg.QueryValueEx(k, "ProgId")[0]
+                if v:
+                    return v
+        except OSError:
+            pass
+    return ""
+
+
 def remove_first_name():
     """Everything the app wrote in Windows under its first name (PDFabrika, until 0.3.9) is removed. If that name was
     the default PDF app, the app asks once to choose PDFactory (Windows ties the choice to the ProgID)."""
@@ -183,7 +199,7 @@ def remove_first_name():
         winreg.OpenKey(C, rf"Software\Classes\{old}.PDF").Close()
     except OSError:
         return                                 # nothing left
-    if current_default() == f"{old}.PDF":
+    if _user_choice() == f"{old}.PDF" or current_default() == f"{old}.PDF":
         (APP_DIR / "data").mkdir(exist_ok=True)
         (APP_DIR / "data" / "ask_default").write_text("1", encoding="utf-8")
 
