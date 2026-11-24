@@ -14,7 +14,7 @@ DATA = APP_DIR / "data"
 
 import applog  # noqa: E402
 
-applog.setup(DATA / "logs", "pdfabrika")
+applog.setup(DATA / "logs", "pdfactory")
 import fonts  # noqa: E402
 import pdfops  # noqa: E402
 import printing  # noqa: E402
@@ -28,7 +28,7 @@ from fastapi import Body, FastAPI, File, Request, UploadFile  # noqa: E402
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response  # noqa: E402
 
 log = applog.get("server")
-PORT = int(os.environ.get("PDFABRIKA_PORT", "8802"))
+PORT = int(os.environ.get("PDFACTORY_PORT", "8802"))
 DEFAULTS = {
     "theme": "dark",
     "ocr_lang": "srp+srp_latn+eng",
@@ -80,7 +80,7 @@ def index():
     html = (APP / "static" / "index.html").read_text(encoding="utf-8")
     for f in ("base.css", "app.css", "dialog.js", "app.js"):          # UI11
         html = html.replace(f'"{f}"', f'"/static/{f}?v={_hash(APP / "static" / f)}"')
-    html = html.replace('"/logo.png"', f'"/logo.png?v={_hash(APP_DIR / "assets" / "pdfabrika_256.png")}"')   # UI11
+    html = html.replace('"/logo.png"', f'"/logo.png?v={_hash(APP_DIR / "assets" / "pdfactory_256.png")}"')   # UI11
     s = settings.load()
     html = html.replace('data-theme="dark"', f'data-theme="{s.get("theme", "dark")}"')
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
@@ -96,17 +96,17 @@ def static(name: str):
 
 @app.get("/favicon.ico")
 def favicon():
-    return FileResponse(APP_DIR / "assets" / "pdfabrika.ico")
+    return FileResponse(APP_DIR / "assets" / "pdfactory.ico")
 
 
 @app.get("/logo.png")
 def logo():
-    return FileResponse(APP_DIR / "assets" / "pdfabrika_256.png", headers={"Cache-Control": "max-age=3600"})
+    return FileResponse(APP_DIR / "assets" / "pdfactory_256.png", headers={"Cache-Control": "max-age=3600"})
 
 
 @app.get("/health")
 def health():
-    return {"app": "pdfabrika", "version": version.VERSION, "pid": os.getpid()}
+    return {"app": "pdfactory", "version": version.VERSION, "pid": os.getpid()}
 
 
 # ---------- opening ----------
@@ -457,6 +457,7 @@ def default_check():
     if ask and now:
         (DATA / "ask_default").unlink(missing_ok=True)
         ask = False
+    lost = lost and not ask
     return {"is_default": now, "lost": bool(lost), "ask": ask, "windows": winsetup.WIN}
 
 

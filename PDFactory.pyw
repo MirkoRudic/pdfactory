@@ -24,13 +24,19 @@ if (Path(sys.executable).parent / "python._pth").exists() or any(Path(sys.execut
     site.addsitedir(str(_sp))
 sys.path.insert(0, str(APP_DIR / "app"))
 DATA = APP_DIR / "data"
-PORT = int(os.environ.get("PDFABRIKA_PORT", "8802"))
+PORT = int(os.environ.get("PDFACTORY_PORT", "8802"))
 URL = f"http://127.0.0.1:{PORT}/"
 TITLE = "PDFactory"
 
+for _old in (DATA / "logs").glob("pdfabrika_*.log"):      # logs from the first name keep showing in Log
+    try:
+        _old.rename(_old.with_name(_old.name.replace("pdfabrika_", "pdfactory_", 1)))
+    except OSError:
+        pass
+
 import applog  # noqa: E402
 
-applog.setup(DATA / "logs", "pdfabrika")
+applog.setup(DATA / "logs", "pdfactory")
 log = applog.get("launcher")
 
 
@@ -38,7 +44,7 @@ def health():
     try:
         with urllib.request.urlopen(URL + "health", timeout=1.5) as r:
             d = json.loads(r.read() or b"{}")
-            return d if d.get("app") in ("pdfabrika", "pdfactory") else None
+            return d if d.get("app") == "pdfactory" else None
     except Exception:
         return None
 
@@ -133,7 +139,7 @@ def taskbar_icon():
         from ctypes import wintypes
         u, sh, ole = ctypes.windll.user32, ctypes.windll.shell32, ctypes.windll.ole32
         ole.CoInitialize(None)
-        ico = str(APP_DIR / "assets" / "pdfabrika.ico")
+        ico = str(APP_DIR / "assets" / "pdfactory.ico")
         import winsetup
         cmd = f'"{winsetup.app_exe()}" "{APP_DIR / "PDFactory.pyw"}"'
 
@@ -211,13 +217,22 @@ def serve():
         raise
 
 
+def alive():
+    """Anything answering /health on our port (also a server of an earlier version)."""
+    try:
+        with urllib.request.urlopen(URL + "health", timeout=1.5):
+            return True
+    except Exception:
+        return False
+
+
 def stop_old():
     try:
         post("api/shutdown")
     except Exception:
         pass
     for _ in range(50):
-        if not health():
+        if not alive():
             return True
         time.sleep(0.2)
     return False
@@ -273,10 +288,9 @@ def main():
         winsetup.open_default_apps()
         time.sleep(9)                   # keeps the thread that brings Settings to the front alive
         return
-    h = health()
-    if h and "--restart" in flags:
+    if "--restart" in flags and alive():
         stop_old()
-        h = None
+    h = health()
     if h:
         if path:
             try:
@@ -286,6 +300,11 @@ def main():
         if "--tiho" not in flags and not focus_window():
             open_window()
         return
+    try:
+        import winsetup
+        winsetup.remove_first_name()         # before the window asks whether PDFactory is the default
+    except Exception:
+        log.exception("first name cleanup")
     t = threading.Thread(target=serve, name="server", daemon=True)
     t.start()
     for _ in range(100):
@@ -327,7 +346,7 @@ def main():
             m.ASK_QUIT = True
             if not focus_window():
                 open_window()
-        icon = pystray.Icon("pdfabrika", Image.open(APP_DIR / "assets" / "pdfabrika_256.png"), TITLE, menu=pystray.Menu(
+        icon = pystray.Icon("pdfactory", Image.open(APP_DIR / "assets" / "pdfactory_256.png"), TITLE, menu=pystray.Menu(
             pystray.MenuItem("Open PDFactory", lambda i, _: (focus_window() or open_window()), default=True),
             pystray.MenuItem("Quit", ask_quit)))
         web.state.quit = lambda: quit_all(icon)

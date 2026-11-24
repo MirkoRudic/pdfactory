@@ -80,7 +80,7 @@ class Win:
         self.r.configure(bg=BG)
         self.r.resizable(False, False)
         try:
-            self.r.iconbitmap(str(APP / "assets" / "pdfabrika.ico"))
+            self.r.iconbitmap(str(APP / "assets" / "pdfactory.ico"))
         except Exception:
             pass
         w, h = 460, 190

@@ -35,7 +35,7 @@ jobs:
           # PDFactory.exe: pythonw.exe with our icon and name (Windows shows these in Task Manager, Default apps)
           Invoke-WebRequest "https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe" -OutFile rcedit.exe
           Copy-Item "$out/python/pythonw.exe" "$out/python/PDFactory.exe"
-          ./rcedit.exe "$out/python/PDFactory.exe" --set-icon assets/pdfabrika.ico --set-version-string FileDescription PDFactory --set-version-string ProductName PDFactory --set-version-string CompanyName "Mirko Rudić" --set-file-version $ver --set-product-version $ver
+          ./rcedit.exe "$out/python/PDFactory.exe" --set-icon assets/pdfactory.ico --set-version-string FileDescription PDFactory --set-version-string ProductName PDFactory --set-version-string CompanyName "Mirko Rudić" --set-file-version $ver --set-product-version $ver
           Copy-Item app,assets,tessdata "$out/" -Recurse
           Copy-Item PDFactory.pyw,LICENSE,README.md "$out/"
           foreach ($l in "srp","srp_latn") {

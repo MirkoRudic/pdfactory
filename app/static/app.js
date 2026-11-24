@@ -133,14 +133,20 @@ function switchDoc(key) {
 // ---------- persistence (window closed by accident: the server keeps the files) ----------
 function persist() {
   try {
-    localStorage.setItem("pdfabrika.ws", JSON.stringify({
+    localStorage.setItem("pdfactory.ws", JSON.stringify({
       pid: S.pid, cur: S.cur,
       docs: S.docs.map((d) => ({ key: d.key, name: d.name, path: d.path, items: d.items, objects: d.objects, forms: d.forms, dirty: d.dirty, srcInfo: d.srcInfo })),
     }));
   } catch (e) { /* storage unavailable: nothing to restore later */ }
 }
 async function restore() {
-  let ws; try { ws = JSON.parse(localStorage.getItem("pdfabrika.ws") || "null"); } catch (e) { ws = null; }
+  try {                                          // workspace saved under the first name
+    for (const k of ["ws", "upd"]) {
+      const o = localStorage.getItem("pdfabrika." + k);
+      if (o !== null) { if (localStorage.getItem("pdfactory." + k) === null) localStorage.setItem("pdfactory." + k, o); localStorage.removeItem("pdfabrika." + k); }
+    }
+  } catch (e) { /* no storage */ }
+  let ws; try { ws = JSON.parse(localStorage.getItem("pdfactory.ws") || "null"); } catch (e) { ws = null; }
   if (!ws || !ws.docs || !ws.docs.length) return;
   if (ws.pid === S.pid) {
     for (const d of ws.docs) S.docs.push({ ...d, hist: [], fut: [], osel: new Set(), scroll: 0 });
@@ -1383,7 +1389,7 @@ async function checkUpd() {
 async function doUpdate(r) {
   if (S.docs.some((d) => d.dirty) && !(await vd.confirm("There are unsaved changes. Update now?", { ok: "Update" }))) return false;
   persist();                                   // open files and edits come back after the restart
-  try { localStorage.setItem("pdfabrika.upd", r.version || ""); } catch (e) { /* no storage */ }
+  try { localStorage.setItem("pdfactory.upd", r.version || ""); } catch (e) { /* no storage */ }
   bar("upd", `${icon("refresh")}<span>Updating to ${esc(r.version || "the new version")}…</span>`);
   const p = await safe(() => api("/api/update", { body: {} }));
   if (p && p.ok) {
@@ -1590,8 +1596,8 @@ async function pollInbox() {
   await restore();
   autoOcr();
   try {
-    const v = localStorage.getItem("pdfabrika.upd");
-    if (v !== null) { localStorage.removeItem("pdfabrika.upd"); toast(`Updated: ${h.version}`); }
+    const v = localStorage.getItem("pdfactory.upd");
+    if (v !== null) { localStorage.removeItem("pdfactory.upd"); toast(`Updated: ${h.version}`); }
   } catch (e) { /* no storage */ }
   const ext = new URLSearchParams(location.search).get("otvori");
   if (ext) history.replaceState(null, "", "/");

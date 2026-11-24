@@ -1,20 +1,20 @@
 Važe pravila iz `D:\VAJB\vajb-osnova\PRAVILA.md`. Ovde su arhitektura, zamke i izuzeci. Šta app radi iz ugla korisnika je u `SPEC.md` — svaka izmena ponašanja prvo tamo.
 
-# PDFactory (ranije PDFabrika)
+# PDFactory
 
 Lokalna zamena za Adobe Reader: čitanje, pretraga, izmene (tekst, ispravka postojećeg teksta, isticanje, oblici, slike, formulari), strane (spajanje, redosled, okretanje, brisanje, izdvajanje, deljenje), OCR, štampa.
 Port **8802**, folder `D:\VAJB\pdfactory`, repo `MirkoRudic/pdfactory`, Python u `.venv`.
 
 ## Arhitektura
-- `PDFactory.pyw` — pokretač (`PDFabrika.pyw` je samo prelaz sa starog imena: stare prečice i ažuriranje iz 0.1.x ga zovu) (Edge `--app` + ikonica pored sata). Argument putanja = otvori fajl (dvoklik na PDF); `--tiho` = start sa Windows-om bez prozora; `--instaliraj`; `--restart`.
+- `PDFactory.pyw` — pokretač (Edge `--app` + ikonica pored sata). Argument putanja = otvori fajl (dvoklik na PDF); `--tiho` = start sa Windows-om bez prozora; `--instaliraj`; `--restart`.
 - `app/main.py` — FastAPI. Stanje servera su samo otvoreni izvori (`pdfops.SOURCES`, PDF u memoriji) i ubačene slike (`pdfops.IMAGES`).
 - `app/pdfops.py` — PyMuPDF: render, tekst, pretraga, `compose()` (radni prostor → novi PDF sa izmenama), OCR.
 - `app/static/app.js` — ceo UI. Radni prostor (dokument) živi u pregledaču: `items` (strane: izvor, broj strane, dodatna rotacija, uid), `objects` (izmene po uid strane), `forms`. Čuva se u localStorage, pa slučajno zatvoren prozor ne gubi izmene (server radi dalje).
 - Koordinate izmena su **tačke prikazane strane** (rotacija primenjena, gore-levo, 1 = 1 pt). Server ih vraća u PDF prostor preko `page.derotation_matrix`; tekst i slike dobijaju `rotate=page.rotation` da stoje uspravno.
 - Čuvanje: `compose()` → upis u `ime.pdf.pfsave` → `os.replace`. Stara verzija ide u `data/rezerva` (poslednjih 20).
-- OCR: PyMuPDF ima ugrađen Tesseract, treba mu samo `tessdata` (`pdfabrika/tessdata`: eng iz repoa, srp i srp_latn kopira instalacija iz `kontrolaizbora\podaci\ocr\tessdata`). Dodaje se nevidljiv sloj teksta (render_mode 3), slika strane se ne menja.
+- OCR: PyMuPDF ima ugrađen Tesseract, treba mu samo `tessdata` (`tessdata/`: eng iz repoa, srp i srp_latn kopira instalacija iz `kontrolaizbora\podaci\ocr\tessdata`). Dodaje se nevidljiv sloj teksta (render_mode 3), slika strane se ne menja.
 - Štampa: `app/printing.py`, pywin32/GDI, sopstveni prozor u app (bez Windows dijaloga štampe).
-- Windows: `app/winsetup.py` — prečica, Startup prečica (`--tiho`), registracija kao PDF program (HKCU, `PDFabrika.PDF`), otvaranje stranice Podrazumevane aplikacije. Osvežava se pri svakom pokretanju. Ikonica programa `assets/pdfabrika.ico`, ikonica .pdf fajlova `assets/pdf_fajl.ico` (bela strana, crvena ivica, fabrika sa PDF).
+- Windows: `app/winsetup.py` — prečica, Startup prečica (`--tiho`), registracija kao PDF program (HKCU, `PDFactory.PDF`), otvaranje stranice Podrazumevane aplikacije. Osvežava se pri svakom pokretanju. Ikonica programa `assets/pdfactory.ico`, ikonica .pdf fajlova `assets/pdf_file.ico` (bela strana, crvena ivica, fabrika sa PDF).
 - `PDFactory.exe` (u `.venv\Scripts`) = kopija venv `pythonw.exe` sa našom ikonicom (pywin32 resource API). Windows ime i ikonicu programa uzima iz .exe-a; sa pythonw.exe piše „Python“. Ako kopija ne pokrene venv (provera pri pravljenju), koristi se pythonw.exe.
 - Instalacija: `Install PDFactory.vbs` → `install.pyw` (sistemski Python, tkinter prozor sa napretkom, brava protiv duplog pokretanja) → `.venv`, paketi, srp tessdata → `PDFactory.pyw --instaliraj`.
 
@@ -41,18 +41,18 @@ Port **8802**, folder `D:\VAJB\pdfactory`, repo `MirkoRudic/pdfactory`, Python u
 - Edge prozor app nudi „Ask Edge to help me write“ nad tekst-okvirima: `writingsuggestions="false"` na `<html>` + `--disable-features` sa poznatim imenima Edge funkcija (imena nisu dokumentovana; nije potvrđeno koje deluje).
 - Prvi klik na tekst-okvir ga samo izabere (Delete ga briše), klik na već izabran okvir počinje kucanje.
 
-- Podrazumevani program se čita preko `AssocQueryString` (ASSOCSTR_PROGID), ne iz registra: noviji Windows 11 drži izbor u `UserChoiceLatest\\ProgId`, pa je PDFabrika pisala da nije podrazumevana iako jeste. Promena vrednosti se upisuje u dnevnik.
+- Podrazumevani program se čita preko `AssocQueryString` (ASSOCSTR_PROGID), ne iz registra: noviji Windows 11 drži izbor u `UserChoiceLatest\\ProgId`, pa je app pisala da nije podrazumevana iako jeste. Promena vrednosti se upisuje u dnevnik.
 
 - Ažuriranje (V5, `_auto_update` u `main.py`): na sat proveri; instalirana kopija tiho preuzme Setup u `data/updates` (`selfupdate.download`), razvojna gleda git. Instalira se samo kad nema otvorenog prozora (`SEEN`: poslednji `/api/inbox` stariji od 5 min) ili pri gašenju (`_update_on_quit`). Setup: `/VERYSILENT /DIR=<app> /RELAUNCH=window|tiho|none /LOG=data\updates\setup.log`; `[Code]` u `setup.iss` bira da li i kako se app ponovo pokreće (`--updated`, `--tiho`). Release pravi workflow na svaki push (`gh release create v<verzija>`), repo mora biti javan.
 - 0.3.6 na drugom računaru: „Update“ je ugasio app, a verzija ostala ista. Uzrok nije utvrđen (nema loga installera u 0.3.6); od 0.3.8 installer piše `data\updates\setup.log`, a `PrivilegesRequiredOverridesAllowed` je izbačen (izbor „za sve korisnike“ bi tražio administratora, a tiho ažuriranje ga nema).
 - Sadržaj dijaloga se pomerao bočno (selekcija/prevlačenje skroluje `overflow:auto` vodoravno): `.dlg .body` ima `overflow-x:hidden`, a `modal()` vraća `scrollLeft` na 0.
 - Deinstalacija iz Settings: instalirana kopija pokreće `unins000.exe /SILENT` ~2 s posle gašenja app (`winsetup.uninstall`); razvojna samo `unregister()` + prečice.
 - Installer je za opciju „default“ otvarao Windows podešavanja pre Finish, bez objašnjenja. Sada `--want-default` samo upiše `data/ask_default`, a app na startu pita u svom dijalogu (`/api/default-check` → `ask`).
+- 0.4.0: sva imena su PDFactory (ProgID `PDFactory.PDF`, `/health` `pdfactory`, localStorage `pdfactory.*`, dnevnik `pdfactory_*.log`). Prvo ime (do 0.3.9) briše `winsetup.remove_first_name()` pri startu; ako je ono bilo podrazumevani PDF program, app jednom pita da se izabere PDFactory (Windows izbor vezuje za ProgID). Migracija dnevnika u pokretaču i localStorage u `app.js`. Sve to može da se obriše kad sve kopije pređu 0.4.0.
 - Prijava problema iz app je uklonjena u 0.3.1 (nije potrebna za sada); kod je u istoriji gita (0.3.0: `_redact`, `/api/report`, mailto).
 
 ## Izuzeci od pravila
 - T1, T3: UI je na engleskom (Mirko, 23.11.2026), brojevi engleski (`1,200.50`). Komentari i CLAUDE.md ostaju kako jesu.
-- Unutrašnja imena ostaju stara: ProgID `PDFabrika.PDF`, ključ `RegisteredApplications\PDFabrika`, health `pdfabrika` (prihvata se i `pdfactory`), localStorage `pdfabrika.*`. Izbor podrazumevanog programa je u Windows-u vezan za ProgID — promena bi ga poništila.
 - Licenca: AGPL 3.0 zbog PyMuPDF (`LICENSE`, Settings → About).
 - Deljenje: `PDFactory-Setup.exe` pravi GitHub Actions (`.github/workflows/setup.yml`, Inno Setup `packaging/setup.iss`) na svaki push: svoj Python (embeddable + tkinter iz punog), `python\PDFactory.exe` sa ikonicom (rcedit), srp tessdata, čarobnjak (folder, prečice, start sa Windows-om, podrazumevani PDF), deinstalacija (`--uninstall` briše registar). Gotov fajl je na grani `dist`. Instalirana kopija nema `.git` (bez ažuriranja iz app); `winsetup.INSTALLED` = postoji `python\PDFactory.exe`.
 - Ranije za drugare: zip bez `.git`, `.venv`, `data`, sa srp tessdata; `Install PDFactory.vbs` instalira Python preko winget ako ga nema. Fajl skinut sa interneta: Windows pri dvokliku jednom pita „Open“ (nepotpisan fajl); bez toga samo uz kupljen sertifikat za potpisivanje koda. Bez `.git` nema dugmeta za ažuriranje.

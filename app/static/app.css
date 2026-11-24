@@ -1,4 +1,4 @@
-/* PDFabrika - loads after base.css */
+/* PDFactory - loads after base.css */
 :root, [data-theme="dark"] { --accent: #e0302b; --accent-text: #ffffff; --danger: #ff6b5e; }
 [data-theme="light"] { --accent: #d3241f; --accent-text: #ffffff; --danger: #b3261e; }
 :root { --top: 60px; --bot: 44px; --thumbs: 176px; --panel: 264px; --page-bg: #2a2c31; --sel: #4f8fd9; }

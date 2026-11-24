@@ -12,10 +12,9 @@ log = applog.get("windows")
 APP_DIR = Path(__file__).resolve().parents[1]
 LAUNCHER = APP_DIR / "PDFactory.pyw"
 NAME = "PDFactory"            # shown everywhere in Windows
-# internal ids keep the first name: the user's default-app choice is stored against PROGID
-ICON = APP_DIR / "assets" / "pdfabrika.ico"          # the program
-FILE_ICON = APP_DIR / "assets" / "pdf_fajl.ico"     # .pdf files in Explorer
-PROGID = "PDFabrika.PDF"
+ICON = APP_DIR / "assets" / "pdfactory.ico"          # the program
+FILE_ICON = APP_DIR / "assets" / "pdf_file.ico"     # .pdf files in Explorer
+PROGID = "PDFactory.PDF"
 NOWIN = 0x08000000
 WIN = sys.platform == "win32"
 
@@ -77,11 +76,6 @@ def _app_exe() -> str:
             log.warning("PDFactory.exe in use, icon updated on next start")
             return str(dst) if dst.exists() else str(src)
         ok_flag.write_text(stamp)
-        for oldname in ("PDFabrika.exe", "PDFabrika.ok", "PDFabrika.old.exe"):     # previous app name
-            try:
-                (src.parent / oldname).unlink(missing_ok=True)
-            except OSError:
-                pass
         log.info("PDFactory.exe ready")
         return str(dst)
     except Exception:
@@ -155,32 +149,75 @@ def _startup_dir() -> Path:
 
 
 def desktop_shortcut():
-    """P1: one shortcut; old shortcuts of this app (PDFabrika, other names) are removed."""
+    """P1: one shortcut on the Desktop."""
     d = _desktop()
-    for old in d.glob("*.lnk"):
-        if old.name != "PDFactory.lnk" and any(n in old.name.lower() for n in ("pdfabrika", "pdfactory")):
-            try:
-                old.unlink()
-            except OSError:
-                pass
     ok = _shortcut(d / "PDFactory.lnk")
     log.info("desktop shortcut: %s", ok)
     return ok
 
 
 def autostart_enabled() -> bool:
-    return WIN and any((_startup_dir() / n).exists() for n in ("PDFactory.lnk", "PDFabrika.lnk"))
+    return WIN and (_startup_dir() / "PDFactory.lnk").exists()
 
 
 def set_autostart(on: bool):
     if not WIN:
         return False
-    (_startup_dir() / "PDFabrika.lnk").unlink(missing_ok=True)      # old name
     lnk = _startup_dir() / "PDFactory.lnk"
     if on:
         return _shortcut(lnk, "--tiho")
     lnk.unlink(missing_ok=True)
     return True
+
+
+def remove_first_name():
+    """Everything the app wrote in Windows under its first name (PDFabrika, until 0.3.9) is removed. If that name was
+    the default PDF app, the app asks once to choose PDFactory (Windows ties the choice to the ProgID)."""
+    if not WIN:
+        return
+    import winreg
+    C = winreg.HKEY_CURRENT_USER
+    old = "PDFabrika"
+    try:
+        winreg.OpenKey(C, rf"Software\Classes\{old}.PDF").Close()
+    except OSError:
+        return                                 # nothing left
+    if current_default() == f"{old}.PDF":
+        (APP_DIR / "data").mkdir(exist_ok=True)
+        (APP_DIR / "data" / "ask_default").write_text("1", encoding="utf-8")
+
+    def rmtree(path):
+        try:
+            with winreg.OpenKey(C, path) as k:
+                subs, i = [], 0
+                while True:
+                    try:
+                        subs.append(winreg.EnumKey(k, i))
+                        i += 1
+                    except OSError:
+                        break
+            for sub in subs:
+                rmtree(path + "\\" + sub)
+            winreg.DeleteKey(C, path)
+        except OSError:
+            pass
+    for path in (rf"Software\Classes\{old}.PDF", rf"Software\{old}", rf"Software\Classes\Applications\{old}.exe",
+                 rf"Software\Classes\Applications\{old}.pyw"):
+        rmtree(path)
+    for path, name in ((r"Software\Classes\.pdf\OpenWithProgids", f"{old}.PDF"), (r"Software\RegisteredApplications", old)):
+        try:
+            with winreg.OpenKey(C, path, 0, winreg.KEY_SET_VALUE) as k:
+                winreg.DeleteValue(k, name)
+        except OSError:
+            pass
+    for lnk in (_desktop() / f"{old}.lnk", _startup_dir() / f"{old}.lnk"):
+        lnk.unlink(missing_ok=True)
+    for f in ("PDFabrika.exe", "PDFabrika.ok", "PDFabrika.old.exe"):
+        try:
+            (Path(pythonw()).parent / f).unlink(missing_ok=True)
+        except OSError:
+            pass
+    log.info("first name removed from Windows")
 
 
 def register():
@@ -214,22 +251,12 @@ def register():
         put(app, "FriendlyAppName", NAME)
         put(app + r"\shell\open\command", "", cmd)
         put(app + r"\SupportedTypes", ".pdf", "")
-    for old in (r"Software\Classes\Applications\PDFabrika.exe\shell\open\command", r"Software\Classes\Applications\PDFabrika.exe\shell\open",
-                r"Software\Classes\Applications\PDFabrika.exe\shell", r"Software\Classes\Applications\PDFabrika.exe\SupportedTypes",
-                r"Software\Classes\Applications\PDFabrika.exe",         # 0.1.x exe name
-                r"Software\Classes\Applications\PDFabrika.pyw\shell\open\command", r"Software\Classes\Applications\PDFabrika.pyw\shell\open",
-                r"Software\Classes\Applications\PDFabrika.pyw\shell", r"Software\Classes\Applications\PDFabrika.pyw\SupportedTypes",
-                r"Software\Classes\Applications\PDFabrika.pyw"):      # 0.1.0 registered the .pyw
-        try:
-            winreg.DeleteKey(C, old)
-        except OSError:
-            pass
-    cap = r"Software\PDFabrika\Capabilities"
+    cap = r"Software\PDFactory\Capabilities"
     put(cap, "ApplicationName", NAME)
     put(cap, "ApplicationDescription", "Read and edit PDF files")
     put(cap, "ApplicationIcon", f"{ICON},0")
     put(cap + r"\FileAssociations", ".pdf", PROGID)
-    put(r"Software\RegisteredApplications", "PDFabrika", cap)
+    put(r"Software\RegisteredApplications", "PDFactory", cap)
     try:
         import ctypes
         ctypes.windll.shell32.SHChangeNotify(0x08000000, 0, None, None)  # SHCNE_ASSOCCHANGED
@@ -272,7 +299,7 @@ def current_default() -> str:
 
 def is_default() -> bool:
     cur = current_default()
-    ok = cur == PROGID or any(n in cur.lower() for n in ("pdfabrika", "pdfactory"))   # also "Applications\\PDFactory.exe" ("Open with")
+    ok = cur == PROGID or "pdfactory" in cur.lower()   # also "Applications\\PDFactory.exe" ("Open with")
     global _last_default
     if cur != _last_default:          # logged once per change, the settings window asks every 1.5 s
         log.info("PDF default is %r", cur)
@@ -324,7 +351,7 @@ def _front_settings_window(timeout=8.0):
 def open_default_apps():
     """Windows lets only the user pick the default program: opens the PDFactory page in Settings, in front."""
     register()
-    os.startfile("ms-settings:defaultapps?registeredAppUser=PDFabrika")
+    os.startfile("ms-settings:defaultapps?registeredAppUser=PDFactory")
     threading.Thread(target=_front_settings_window, name="podesavanja-napred", daemon=True).start()
 
 
@@ -360,11 +387,10 @@ def unregister():
             pass
     rmtree(rf"Software\Classes\{PROGID}")
     rmtree(r"Software\Classes\Applications\PDFactory.exe")
-    rmtree(r"Software\PDFabrika")
+    rmtree(r"Software\PDFactory")
     rmval(r"Software\Classes\.pdf\OpenWithProgids", PROGID)
-    rmval(r"Software\RegisteredApplications", "PDFabrika")
-    for n in ("PDFactory.lnk", "PDFabrika.lnk"):
-        (_startup_dir() / n).unlink(missing_ok=True)
+    rmval(r"Software\RegisteredApplications", "PDFactory")
+    (_startup_dir() / "PDFactory.lnk").unlink(missing_ok=True)
     try:
         import ctypes
         ctypes.windll.shell32.SHChangeNotify(0x08000000, 0, None, None)
@@ -389,7 +415,7 @@ def uninstall() -> str:
         return "installed"
     unregister()
     for old in _desktop().glob("*.lnk"):
-        if any(n in old.name.lower() for n in ("pdfabrika", "pdfactory")):
+        if "pdfactory" in old.name.lower():
             old.unlink(missing_ok=True)
     return "dev"
 

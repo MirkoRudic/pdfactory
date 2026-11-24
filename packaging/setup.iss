@@ -16,7 +16,7 @@ DefaultDirName={localappdata}\Programs\PDFactory
 DefaultGroupName=PDFactory
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
-SetupIconFile=..\assets\pdfabrika.ico
+SetupIconFile=..\assets\pdfactory.ico
 UninstallDisplayIcon={app}\python\PDFactory.exe
 UninstallDisplayName=PDFactory
 LicenseFile=..\LICENSE
@@ -45,9 +45,9 @@ Source: "..\build\PDFactory\*"; DestDir: "{app}"; Flags: recursesubdirs createal
 Name: "{app}\data"
 
 [Icons]
-Name: "{autoprograms}\PDFactory"; Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\assets\pdfabrika.ico"
-Name: "{autodesktop}\PDFactory"; Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\assets\pdfabrika.ico"; Tasks: desktopicon
-Name: "{userstartup}\PDFactory"; Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"" --tiho"; WorkingDir: "{app}"; IconFilename: "{app}\assets\pdfabrika.ico"; Tasks: autostart
+Name: "{autoprograms}\PDFactory"; Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\assets\pdfactory.ico"
+Name: "{autodesktop}\PDFactory"; Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\assets\pdfactory.ico"; Tasks: desktopicon
+Name: "{userstartup}\PDFactory"; Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"" --tiho"; WorkingDir: "{app}"; IconFilename: "{app}\assets\pdfactory.ico"; Tasks: autostart
 
 [Run]
 ; the default app is chosen in Windows Settings; the app asks for it at its first start, with an explanation
