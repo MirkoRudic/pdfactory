@@ -19,6 +19,7 @@ import fonts  # noqa: E402
 import pdfops  # noqa: E402
 import printing  # noqa: E402
 import selfupdate  # noqa: E402
+import localguard  # noqa: E402
 import settings  # noqa: E402
 import tempdir  # noqa: E402
 import update  # noqa: E402
@@ -47,6 +48,7 @@ threading.Thread(target=lambda: fonts.init(DATA / "fonts.json"), name="fontovi",
 selfupdate.clean(DATA / "updates")
 
 app = FastAPI()
+localguard.install(app, log)          # F9: only our own window (no DNS rebinding, no CSRF)
 app.state.quit = None
 ASK_QUIT = False               # tray menu "Quit": the window asks for confirmation (P4)
 SEEN = {"t": 0.0}               # last poll of an open app window (V5: updates install only when no window is open)

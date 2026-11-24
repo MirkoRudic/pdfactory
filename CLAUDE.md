@@ -52,6 +52,8 @@ Port **8802**, folder `D:\VAJB\pdfactory`, repo `MirkoRudic/pdfactory`, Python u
 - 0.4.0: sva imena su PDFactory (ProgID `PDFactory.PDF`, `/health` `pdfactory`, localStorage `pdfactory.*`, dnevnik `pdfactory_*.log`). Prvo ime (do 0.3.9) briše `winsetup.remove_first_name()` pri startu; ako je ono bilo podrazumevani PDF program, app jednom pita da se izabere PDFactory (Windows izbor vezuje za ProgID). Izmereno na laptopu: posle brisanja starog ProgID-a Windows je za 3 minuta vratio Acrobat, a `AssocQueryString` je u međuvremenu javljao PDFactory (iz OpenWithProgids) — zato se izbor čita iz registra (`_user_choice`). Migracija dnevnika u pokretaču i localStorage u `app.js`. Sve to može da se obriše kad sve kopije pređu 0.4.0.
 - Prijava problema iz app je uklonjena u 0.3.1 (nije potrebna za sada); kod je u istoriji gita (0.3.0: `_redact`, `/api/report`, mailto).
 
+- F9 (`localguard`): server odbija tuđ Host (DNS rebinding) i zahtev koji menja stanje sa tuđe stranice; bez toga bi bilo koja stranica u pregledaču mogla da traži `/api/open` (čitanje fajlova) ili `/api/save` (upis).
+
 ## Izuzeci od pravila
 - T1, T3: UI je na engleskom (Mirko, 23.11.2026), brojevi engleski (`1,200.50`). Komentari i CLAUDE.md ostaju kako jesu.
 - Licenca: AGPL 3.0 zbog PyMuPDF (`LICENSE`, Settings → About).
