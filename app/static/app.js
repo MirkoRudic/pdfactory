@@ -1313,18 +1313,34 @@ async function settingsDlg() {
       ab.appendChild(about);
       const v = sec("Version");
       const vr = document.createElement("div"); vr.className = "set-row";
-      vr.innerHTML = `<span>${esc(s.version)}</span>`;
-      if (s.git) vr.appendChild(btn(icon("refresh") + "Check and update", async (e) => {
-        const r = await api("/api/update").catch(() => ({ ok: false }));
-        const nova = r.ok && (r.behind || r.restart);
-        const el = e.target.closest("button");
-        if (nova) {                             // one click: check, download and restart
-          el.outerHTML = `<span class="ok">Updating to ${esc(r.version || "the new version")}…</span>`;
-          if (!(await doUpdate(r))) draw();
-          return;
-        }
-        el.outerHTML = r.ok ? '<span class="muted">Up to date</span>' : '<span class="muted">Check failed</span>';
-      }));
+      const info = document.createElement("div"); info.className = "ver";
+      info.innerHTML = `<span>${esc(s.version)}</span><span class="ver-st"></span>`;
+      vr.appendChild(info);
+      const st = $(".ver-st", info);
+      const hhmm = (d) => d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+      let vb = null;
+      const paint = () => {                     // state of the last check, automatic or by hand
+        const u = S.upd; if (!u) { st.innerHTML = '<span class="muted">Checking…</span>'; return; }
+        const nova = u.r.ok && (u.r.behind || u.r.restart);
+        st.innerHTML = !u.r.ok ? `<span class="muted">Check failed · ${hhmm(u.at)}</span>`
+          : nova ? `<span class="accent">New version ${esc(u.r.version || "")}</span>`
+          : `<span class="ok">${icon("check")}Up to date</span><span class="muted">· checked ${hhmm(u.at)}</span>`;
+        if (vb) vb.innerHTML = nova ? icon("download") + `Update to ${esc(u.r.version || "")}` : icon("refresh") + "Check for updates";
+        if (vb) vb.classList.toggle("primary", !!nova);
+      };
+      if (s.git) {
+        vb = btn("", async () => {
+          let r = S.upd && S.upd.r;
+          if (!(r && r.ok && (r.behind || r.restart))) { st.innerHTML = '<span class="muted">Checking…</span>'; r = await checkUpd(); paint(); }
+          if (r.ok && (r.behind || r.restart)) {   // one click: check, download and restart
+            vb.disabled = true; st.innerHTML = `<span class="ok">Updating to ${esc(r.version || "the new version")}…</span>`;
+            if (!(await doUpdate(r))) { vb.disabled = false; paint(); }
+          }
+        });
+        vr.appendChild(vb);
+      }
+      paint();
+      if (s.git && (!S.upd || Date.now() - S.upd.at > 3600 * 1000)) checkUpd().then(() => body.isConnected && paint());
       v.appendChild(vr);
       if (s.windows) {                                   // last, as usual in Windows programs (P9)
         const u = sec("Uninstall");
@@ -1353,6 +1369,12 @@ function bar(id, html, cls = "") {
   if (!html) { if (b) b.remove(); return null; }
   if (!b) { b = document.createElement("div"); b.id = id; $("#bars").appendChild(b); }
   b.className = "bar " + cls; b.innerHTML = html; return b;
+}
+// every check (at start, hourly, by hand) is remembered: Settings shows whether the app is up to date (V3)
+async function checkUpd() {
+  const r = await api("/api/update").catch(() => ({ ok: false }));
+  S.upd = { r, at: new Date() };
+  return r;
 }
 function showUpdate(r) {
   const b = bar("upd", `${icon("refresh")}<span>New version ${esc(r.version || "")}</span><button class="primary">Update</button>`);
@@ -1564,7 +1586,6 @@ async function pollInbox() {
   renderAll();
   pollInbox();
   checkDefault();
-  const u = await api("/api/update").catch(() => null);
-  if (u && u.ok && (u.behind || u.restart)) showUpdate(u);
-  setInterval(async () => { const r = await api("/api/update").catch(() => null); if (r && r.ok && (r.behind || r.restart)) showUpdate(r); }, 3600 * 1000);
+  const auto = async () => { const r = await checkUpd(); if (r.ok && (r.behind || r.restart)) showUpdate(r); };
+  auto(); setInterval(auto, 3600 * 1000);
 })();

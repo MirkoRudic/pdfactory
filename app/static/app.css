@@ -240,3 +240,8 @@ body.tool-text .ol, body.tool-mark .ol, body.tool-shape .ol { cursor: crosshair;
 .more-body[hidden] { display: none; }
 button.link { background: none; border: 0; padding: 0; height: auto; min-height: 0; color: var(--accent); font: inherit; cursor: pointer; }
 button.link:hover { text-decoration: underline; background: none; }
+.ver { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ver-st { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+.ver-st .ok { display: inline-flex; align-items: center; gap: 4px; }
+.ver-st svg { width: 14px; height: 14px; }
+.accent { color: var(--accent); }
