@@ -1301,12 +1301,17 @@ async function settingsDlg() {
         shows it. Files never leave the computer; the internet is used only to check for and download updates.
         No account, no subscription, no AI tokens.</p>
         <p>Made by Mirko Rudić with Claude Opus 5.5 (Anthropic).</p>
+        <button type="button" class="link more">More</button>
+        <div class="more-body" hidden>
         <div class="lic">${[["PyMuPDF / MuPDF", "PDF engine", "AGPL 3.0"], ["Tesseract OCR", "text recognition", "Apache 2.0"],
           ["FastAPI, Uvicorn", "local server", "MIT, BSD"], ["Pillow", "images", "MIT-CMU"], ["pystray", "tray icon", "LGPL 3.0"],
           ["pywin32", "printing, Windows", "PSF"], ["Tabler Icons", "icons", "MIT"], ["Python", "runtime", "PSF"]]
           .map(([a, b, c]) => `<span>${a}</span><span class="muted">${b}</span><span class="muted">${c}</span>`).join("")}</div>
         <p class="muted">PDFactory license: GNU AGPL 3.0 (because of PyMuPDF). Free to use and share; if it is ever sold or
-        published, its source must stay open, or PyMuPDF needs a commercial license.</p>`;
+        published, its source must stay open, or PyMuPDF needs a commercial license.</p>
+        </div>`;
+      const mb = $(".more", about);
+      mb.onclick = () => { const h = $(".more-body", about); h.hidden = !h.hidden; mb.textContent = h.hidden ? "More" : "Less"; };
       ab.appendChild(about);
       const v = sec("Version");
       const vr = document.createElement("div"); vr.className = "set-row";
