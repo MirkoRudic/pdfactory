@@ -123,9 +123,19 @@ def match(pdf_font_name: str) -> str:
     for name in _families:
         if _norm(name) == nb:
             return name
-    for name in _families:
-        if nb and _norm(name).startswith(nb):
-            return name
+    # "Montserrat" also starts "Montserrat Black", "Montserrat ExtraBold"...: the plain family first, then the shortest;
+    # bold / italic stay a separate choice (taken from the PDF span), not a different family
+    weights = ("thin", "light", "medium", "semibold", "bold", "extrabold", "black", "heavy", "condensed", "narrow")
+    cands = [name for name in _families if nb and _norm(name).startswith(nb)]
+    if cands:
+        plain = [c for c in cands if not any(w in _norm(c)[len(nb):] for w in weights)]
+        if plain:
+            return min(plain, key=len)
+        rest = _norm(n)[len(nb):]                       # e.g. "black" from "Montserrat-Black"
+        same = [c for c in cands if rest and _norm(c)[len(nb):] == rest]
+        if same:
+            return same[0]
+        # only heavier/lighter cuts of the family are installed: a neutral font, not "Montserrat Black" for regular text
     if twins.get(nb) in _families:
         return twins[nb]
     for fallback in ("Arial", "DejaVu Sans", "Liberation Sans"):

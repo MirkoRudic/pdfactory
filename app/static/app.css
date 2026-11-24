@@ -246,3 +246,16 @@ button.link:hover { text-decoration: underline; background: none; }
 .ver-st svg { width: 14px; height: 14px; }
 .accent { color: var(--accent); }
 .dlg-msg { margin: 0; text-align: center; line-height: 1.6; }
+
+/* right click menu (left column) */
+.ctxm { position: fixed; z-index: 900; min-width: 210px; padding: 6px; display: flex; flex-direction: column; gap: 2px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.45); }
+.ctxm button { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; background: transparent; border: 0;
+  border-radius: 6px; color: var(--text); text-align: left; justify-content: flex-start; }
+.ctxm button:hover { background: var(--hover, rgba(255,255,255,.06)); }
+.ctxm button.danger { color: var(--danger); }
+.ctxm svg { width: 16px; height: 16px; }
+.thumb.drop-t { box-shadow: 0 -3px 0 var(--accent); }
+.thumb.drop-b { box-shadow: 0 3px 0 var(--accent); }
+.tool-hint { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.ctxm button:disabled { opacity: .4; cursor: default; background: transparent; }

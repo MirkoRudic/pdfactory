@@ -352,9 +352,68 @@ function renderThumbs() {
     b.innerHTML = `<img class="ti" width="${Math.round(w * k)}" height="${Math.round(h * k)}" alt=""><span>${i + 1}</span>`;
     $("img", b).dataset.src = pageImgUrl(it, 240);
     b.onclick = () => scrollToPage(i);
+    b.oncontextmenu = (e) => { e.preventDefault(); thumbMenu(e, i); };
+    // drag to change the order of pages (same as in Pages)
+    b.draggable = true;
+    b.ondragstart = (e) => { S.tdrag = i; e.dataTransfer.effectAllowed = "move"; };
+    b.ondragover = (e) => {
+      if (S.tdrag == null) return; e.preventDefault();
+      const r = b.getBoundingClientRect(); const up = e.clientY < r.top + r.height / 2;
+      $$(".thumb", box).forEach((x) => x.classList.remove("drop-t", "drop-b"));
+      b.classList.add(up ? "drop-t" : "drop-b");
+    };
+    b.ondrop = (e) => {
+      e.preventDefault(); const from = S.tdrag; S.tdrag = null; if (from == null) return;
+      const r = b.getBoundingClientRect(); let to = e.clientY < r.top + r.height / 2 ? i : i + 1;
+      if (to > from) to--;
+      if (to === from) { renderThumbs(); return; }
+      commit();
+      const [it] = d.items.splice(from, 1); d.items.splice(to, 0, it);
+      d.curPage = to; renderAll();
+    };
+    b.ondragend = () => { S.tdrag = null; $$(".thumb", box).forEach((x) => x.classList.remove("drop-t", "drop-b")); };
     box.appendChild(b); tio.observe(b);
   });
 }
+// right click on a page in the left column: our own menu (the browser's menu has nothing useful here)
+function thumbMenu(e, i) {
+  closeMenus();
+  const d = D(); const it = d.items[i];
+  const m = document.createElement("div"); m.className = "ctxm";
+  const add = (ic, label, fn, danger, off) => {
+    const x = document.createElement("button"); x.type = "button"; if (danger) x.className = "danger"; x.disabled = !!off;
+    x.innerHTML = icon(ic) + esc(label); x.onclick = () => { closeMenus(); fn(); }; m.appendChild(x);
+  };
+  add("copy", "Copy page as image", () => copyPageImage(it));
+  add("rot-r", "Rotate right", () => { commit(); const [W, H] = itemDims(it); for (const o of d.objects[it.uid] || []) rotObj(o, W, H, 90); it.rot = (it.rot + 90) % 360; renderAll(); });
+  add("arrow-up", "Move up", () => { if (!i) return; commit(); d.items.splice(i - 1, 0, d.items.splice(i, 1)[0]); d.curPage = i - 1; renderAll(); }, false, i === 0);
+  add("arrow-down", "Move down", () => { if (i >= d.items.length - 1) return; commit(); d.items.splice(i + 1, 0, d.items.splice(i, 1)[0]); d.curPage = i + 1; renderAll(); }, false, i >= d.items.length - 1);
+  add("trash", "Delete page", async () => {
+    if (d.items.length === 1) { await vd.message("Can't delete the only page."); return; }
+    commit(); d.items.splice(i, 1); delete d.objects[it.uid]; d.curPage = Math.min(i, d.items.length - 1); renderAll();
+  }, true);
+  document.body.appendChild(m);
+  const w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.min(e.clientX, innerWidth - w - 8) + "px";
+  m.style.top = Math.min(e.clientY, innerHeight - h - 8) + "px";
+  setTimeout(() => document.addEventListener("pointerdown", (ev) => { if (!m.contains(ev.target)) closeMenus(); }, { once: true }));
+}
+function closeMenus() { $$(".ctxm").forEach((x) => x.remove()); }
+async function copyPageImage(it) {
+  try {
+    const [w] = itemDims(it);
+    const blob = await (await fetch(pageImgUrl(it, Math.min(3600, Math.round(w * 300 / 72))))).blob();   // 300 dpi
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    toast("Page copied as image.");
+  } catch (err) { toast("Copying failed."); }
+}
+// no browser menu anywhere in the app, except where text is typed or selected (copy / paste)
+document.addEventListener("contextmenu", (e) => {
+  const t = e.target;
+  if (t.closest("input, textarea, [contenteditable=true]")) return;
+  if (String(getSelection() || "").trim()) return;
+  e.preventDefault();
+});
 function scrollToPage(i, offsetPt = 0) {
   const pg = $(`.page[data-i="${i}"]`); if (!pg) return;
   const host = $("#pages");
@@ -408,6 +467,13 @@ function gotoHit(n) {
   $("#qn").textContent = `${S.hit + 1}/${formatNumber(S.hits.length)}`;
   scrollToPage(h.i, Math.max(0, h.rect[1] - 80));
   $$(".page").forEach(drawHits);
+  // the hit in the middle of the window (from the hit itself, not from page offsets)
+  const cur = $(".hit.cur"), host = $("#pages");
+  if (cur) {
+    const r = cur.getBoundingClientRect(), hr = host.getBoundingClientRect();
+    host.scrollTop += (r.top + r.height / 2) - (hr.top + host.clientHeight / 2);
+    host.scrollLeft += Math.min(0, r.left - hr.left - 40) + Math.max(0, r.right - (hr.left + host.clientWidth) + 40);
+  }
 }
 function drawHits(pg) {
   $$(".hit", pg).forEach((x) => x.remove());
@@ -464,7 +530,7 @@ function showProgress(text) {
 
 // ---------- edit: panel ----------
 const TOOLS = [
-  ["select", "pointer", "Select and move"], ["text", "text", "Add text"], ["fix", "cursor", "Edit text"],
+  ["select", "pointer", "Move and resize"], ["text", "text", "Add text"], ["fix", "cursor", "Edit text"],
   ["mark", "mark", "Highlight"], ["shape", "shapes", "Shape"], ["image", "photo", "Image"], ["form", "form", "Fill form"],
 ];
 function setTool(t) {
@@ -495,6 +561,11 @@ function renderPanel() {
   else if (kind === "mark") propsMark(box, o || S.def.mark);
   else if (kind === "image" && o) propsImage(box, o);
   if (box.childElementCount) { P.appendChild(sep()); P.appendChild(box); }
+  else if (!o && S.tool === "select") {
+    P.appendChild(sep());
+    P.appendChild(Object.assign(document.createElement("p"), { className: "tool-hint",
+      textContent: "Click a text, image or shape you added to select it. Drag to move it, drag a corner to resize." }));
+  }
   if (o) {
     P.appendChild(sep());
     const r = row(2);
