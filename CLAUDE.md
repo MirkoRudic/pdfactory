@@ -44,7 +44,7 @@ Port **8802**, folder `D:\VAJB\pdfactory`, repo `MirkoRudic/pdfactory`, Python u
 - Podrazumevani program se čita preko `AssocQueryString` (ASSOCSTR_PROGID), ne iz registra: noviji Windows 11 drži izbor u `UserChoiceLatest\\ProgId`, pa je PDFabrika pisala da nije podrazumevana iako jeste. Promena vrednosti se upisuje u dnevnik.
 
 - Ažuriranje instalirane kopije (`app/selfupdate.py`): GitHub Release `latest` (repo mora biti javan) → traka „New version“ → preuzme Setup u `data/updates`, pokrene ga `/VERYSILENT /DIR=<app>`; installer zatvori app, zameni fajlove i ponovo je pokrene (`[Run] Check: WizardSilent`). Stari installeri se brišu pri sledećem startu. Release pravi workflow na svaki push (`gh release create v<verzija>`).
-- Prijava problema (Settings → About → Report a problem): opis + dnevnik bez dokumenata i imena fajlova (`_redact`: putanje → `<path>`/`<file>`), korisnik vidi šta šalje; ide kao mejl (`mailto:` preko `os.startfile`, bez servera) na `REPORT_TO` u `main.py`. Predugačak tekst ide i u clipboard.
+- Prijava problema iz app je uklonjena u 0.3.1 (nije potrebna za sada); kod je u istoriji gita (0.3.0: `_redact`, `/api/report`, mailto).
 
 ## Izuzeci od pravila
 - T1, T3: UI je na engleskom (Mirko, 23.11.2026), brojevi engleski (`1,200.50`). Komentari i CLAUDE.md ostaju kako jesu.

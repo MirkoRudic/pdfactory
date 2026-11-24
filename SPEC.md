@@ -66,7 +66,7 @@ Alati: Select and move, Add text, Edit text, Highlight, Shape, Image, Fill form.
 - **Appearance**: tamna / svetla tema.
 - **Windows**: start sa Windows-om (prekidač), podrazumevani program (stanje + dugme).
 - **Log**: pregled i brisanje dnevnika.
-- **About**: kako app radi, šta koristi, „Made by Mirko with Claude Opus 5.5 (Anthropic)“, licence (AGPL 3.0 + komponente), **Report a problem**.
+- **About**: kako app radi, šta koristi, „Made by Mirko with Claude Opus 5.5 (Anthropic)“, licence (AGPL 3.0 + komponente).
 - **Version**: „Check and update“ → jedan klik proveri i odmah ažurira; posle ponovnog otvaranja piše „Updated: x.y.z“.
 - Nema liste prečica ni OCR podešavanja.
 
@@ -75,13 +75,7 @@ Alati: Select and move, Add text, Edit text, Highlight, Shape, Image, Fill form.
 - Postoji nova verzija → mala, diskretna traka „New version“. Klik → preuzme i instalira bez čarobnjaka, app se sama zatvori i ponovo otvori, izmene u radu ostaju.
 - Nema interneta → ništa se ne prikazuje, nema greške.
 
-## 9. Prijava problema
-
-- Report a problem → polje za opis + (uključeno) dnevnik. Korisnik **vidi tačno šta se šalje**.
-- U dnevniku nema dokumenata, sadržaja ni imena fajlova i putanja (zamenjeni sa `<file>` / `<path>`).
-- Send → otvori se mejl program sa popunjenim mejlom na adresu za prijave (`REPORT_TO`); korisnik sam klikne Pošalji. Predugačak tekst ide i u clipboard.
-
-## 10. Izgled
+## 9. Izgled
 
 - Zaglavlje: levo Open | Undo Redo; sredina Read / Edit / Pages; desno Save, Print, Settings, Quit. Bez logoa i imena u zaglavlju.
 - Crvena boja (Acrobat stil), simetrično i poravnato. UI na engleskom, brojevi `1,200.50`.
@@ -95,6 +89,7 @@ Alati: Select and move, Add text, Edit text, Highlight, Shape, Image, Fill form.
 - OCR podešavanja, lista prečica u Settings.
 - Mac i Linux (za sada samo Windows).
 - Windows obaveštenja (napredak je u prozoru app).
+- Prijava problema iz app (za sada).
 
 ## Otvoreno (nije potvrđeno na pravom Windows-u)
 Štampa, Windows prozori za otvaranje/čuvanje, installer i deinstalacija, tiho ažuriranje, gašenje Edge „Help me write“.
