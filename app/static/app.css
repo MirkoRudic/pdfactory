@@ -197,7 +197,7 @@ body.tool-text .ol, body.tool-mark .ol, body.tool-shape .ol { cursor: crosshair;
 /* dialogs (bigger than vd) */
 .dlg { width: min(680px, calc(100vw - 32px)); max-height: calc(100vh - 64px); text-align: left; display: flex; flex-direction: column; gap: 16px; }
 .dlg h2 { margin: 0; font-size: 16px; text-align: center; }
-.dlg .body { overflow-y: auto; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+.dlg .body { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
 .dlg .vd-buttons { flex: none; }
 .pr { display: flex; gap: 22px; }
 .pr-prev { flex: 0 0 180px; display: grid; place-items: center; background: var(--bg); border-radius: 8px; padding: 14px; min-height: 220px; }
@@ -218,7 +218,7 @@ body.tool-text .ol, body.tool-mark .ol, body.tool-shape .ol { cursor: crosshair;
 .chip { height: 30px; padding: 0 12px; border-radius: 15px; font-size: 13px; color: var(--muted); }
 .chip.on { background: var(--border); color: var(--text); border-color: var(--muted); }
 .log { height: 240px; overflow: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
-  font: 11px/1.5 ui-monospace, Consolas, monospace; white-space: pre; user-select: text; }
+  font: 11px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: hidden; user-select: text; }
 .log .e { color: var(--danger); }
 .ok { color: #4caf50; }
 .prog { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
@@ -229,3 +229,7 @@ body.tool-text .ol, body.tool-mark .ol, body.tool-shape .ol { cursor: crosshair;
 .about { display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 1.5; user-select: text; }
 .about p { margin: 0; }
 .lic { display: grid; grid-template-columns: max-content 1fr max-content; gap: 4px 16px; }
+.dlg .body > * { min-width: 0; max-width: 100%; }
+.row-btns { display: flex; gap: 8px; }
+.danger-btn { color: var(--danger); }
+.dlg .log { height: 50vh; }

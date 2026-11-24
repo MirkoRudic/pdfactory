@@ -373,6 +373,27 @@ def unregister():
     log.info("unregistered")
 
 
+def uninstall() -> str:
+    """Settings → Uninstall. Installed: unins000.exe /SILENT starts ~2 s later (after the app has exited, so its files can go).
+    Dev copy (git folder): only what install() wrote in Windows is removed; the folder stays."""
+    if not WIN:
+        return "none"
+    if INSTALLED:
+        exe = sorted(APP_DIR.glob("unins*.exe"))
+        if not exe:
+            log.error("uninstall: unins*.exe missing in %s", APP_DIR)
+            return "missing"
+        import subprocess
+        subprocess.Popen(f'cmd /c ping -n 3 127.0.0.1 >nul & "{exe[-1]}" /SILENT /SUPPRESSMSGBOXES /NORESTART',
+                         creationflags=0x08000000 | 0x00000008, close_fds=True)   # CREATE_NO_WINDOW | DETACHED_PROCESS
+        return "installed"
+    unregister()
+    for old in _desktop().glob("*.lnk"):
+        if any(n in old.name.lower() for n in ("pdfabrika", "pdfactory")):
+            old.unlink(missing_ok=True)
+    return "dev"
+
+
 def install():
     """Called by Instaliraj.vbs (--instaliraj): shortcut, autostart, file association."""
     desktop_shortcut()

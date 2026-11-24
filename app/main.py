@@ -424,7 +424,8 @@ def get_settings():
     return {"theme": s["theme"], "ocr_lang": s["ocr_lang"], "tessdata": td, "langs": pdfops.tess_langs(td),
             "version": version.label(), "log_mb": applog.size_mb(),
             "autostart": winsetup.autostart_enabled(), "is_default": winsetup.is_default(),
-            "windows": winsetup.WIN, "git": (APP_DIR / ".git").exists() or winsetup.INSTALLED}
+            "windows": winsetup.WIN, "git": (APP_DIR / ".git").exists() or winsetup.INSTALLED,
+            "installed": winsetup.INSTALLED}
 
 
 @app.post("/api/settings")
@@ -520,6 +521,15 @@ def shutdown():
         os._exit(0)
     threading.Thread(target=stop, daemon=True).start()
     return {"ok": True}
+
+
+@app.post("/api/uninstall")
+def uninstall():
+    """Settings → Uninstall. Installed copy: the Inno uninstaller runs after this process exits; dev copy: Windows entries only."""
+    mode = winsetup.uninstall()
+    log.info("uninstall: %s", mode)
+    shutdown()
+    return {"ok": True, "mode": mode}
 
 
 @app.post("/api/ugasi")

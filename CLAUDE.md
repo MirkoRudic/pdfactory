@@ -44,6 +44,8 @@ Port **8802**, folder `D:\VAJB\pdfactory`, repo `MirkoRudic/pdfactory`, Python u
 - Podrazumevani program se čita preko `AssocQueryString` (ASSOCSTR_PROGID), ne iz registra: noviji Windows 11 drži izbor u `UserChoiceLatest\\ProgId`, pa je PDFabrika pisala da nije podrazumevana iako jeste. Promena vrednosti se upisuje u dnevnik.
 
 - Ažuriranje instalirane kopije (`app/selfupdate.py`): GitHub Release `latest` (repo mora biti javan) → traka „New version“ → preuzme Setup u `data/updates`, pokrene ga `/VERYSILENT /DIR=<app>`; installer zatvori app, zameni fajlove i ponovo je pokrene (`[Run] Check: WizardSilent`). Stari installeri se brišu pri sledećem startu. Release pravi workflow na svaki push (`gh release create v<verzija>`).
+- Sadržaj dijaloga se pomerao bočno (selekcija/prevlačenje skroluje `overflow:auto` vodoravno): `.dlg .body` ima `overflow-x:hidden`, a `modal()` vraća `scrollLeft` na 0.
+- Deinstalacija iz Settings: instalirana kopija pokreće `unins000.exe /SILENT` ~2 s posle gašenja app (`winsetup.uninstall`); razvojna samo `unregister()` + prečice.
 - Prijava problema iz app je uklonjena u 0.3.1 (nije potrebna za sada); kod je u istoriji gita (0.3.0: `_redact`, `/api/report`, mailto).
 
 ## Izuzeci od pravila

@@ -1249,7 +1249,9 @@ function modal(title, build, buttons) {
     }
     ov.addEventListener("mousedown", (e) => { if (e.target === ov) close(false); });
     addEventListener("keydown", key, true);
-    build($(".body", ov), close);
+    const bd = $(".body", ov);
+    bd.addEventListener("scroll", () => { if (bd.scrollLeft) bd.scrollLeft = 0; });   // content never shifts sideways
+    build(bd, close);
     document.body.appendChild(ov);
   });
 }
@@ -1278,29 +1280,19 @@ async function settingsDlg() {
         } else {
           srow(b, "PDF app", btn("Set as default", async () => { await api("/api/default-app", { body: {} }); watchDefault(); }));
         }
+        const un = btn(icon("trash") + "Uninstall", () => uninstall()); un.classList.add("danger-btn");
+        srow(b, "Remove PDFactory from this computer", un);
       }
 
       const lg = sec("Log");
-      const box = document.createElement("div"); box.className = "log";
-      const ctl = document.createElement("div"); ctl.className = "set-row";
-      const q = document.createElement("input"); q.placeholder = "Filter"; q.style.flex = "1";
-      let only = false;
-      const load = async () => {
-        const r = await api(`/api/log?days=3&problems=${only}&q=${encodeURIComponent(q.value)}`).catch(() => ({ lines: [] }));
-        box.innerHTML = r.lines.map((l) => `<div class="${/ (ERROR|CRITICAL|WARNING) /.test(l) || /^\s|Traceback/.test(l) ? "e" : ""}">${esc(l)}</div>`).join("") || '<span class="muted">Prazno</span>';
-        box.scrollTop = box.scrollHeight;
-      };
-      q.oninput = () => { clearTimeout(q.t); q.t = setTimeout(load, 250); };
-      const pb = btn("Problems only", () => { only = !only; pb.classList.toggle("on", only); load(); });
-      ctl.append(q, pb);
-      lg.append(ctl, box);
-      const del = document.createElement("div"); del.className = "set-row";
-      del.innerHTML = `<span class="muted">Size: ${formatNumber(s.log_mb, 1)} MB</span>`;
-      del.appendChild(btn("Delete older than 30 days", async () => {
-        if (!(await vd.confirm("Delete log entries older than 30 days?", { ok: "Delete", danger: true }))) return;
-        await api("/api/log/delete", { body: { days: 30 } }); s = await api("/api/settings"); draw(); }));
-      lg.appendChild(del);
-      load();
+      const lr = document.createElement("div"); lr.className = "set-row";
+      lr.innerHTML = `<span class="muted">Size: ${formatNumber(s.log_mb, 1)} MB</span>`;
+      const lb = document.createElement("div"); lb.className = "row-btns";
+      lb.append(btn(icon("list") + "Show log", () => logDlg()),
+        btn("Delete older than 30 days", async () => {
+          if (!(await vd.confirm("Delete log entries older than 30 days?", { ok: "Delete", danger: true }))) return;
+          await api("/api/log/delete", { body: { days: 30 } }); s = await api("/api/settings"); draw(); }));
+      lr.appendChild(lb); lg.appendChild(lr);
 
       const ab = sec("About");
       const about = document.createElement("div"); about.className = "about";
@@ -1381,6 +1373,37 @@ async function checkDefault() {
     $$("button", b)[0].onclick = () => api("/api/default-app", { body: {} });
     $$("button", b)[1].onclick = () => b.remove();
   }
+}
+
+// ---------- log (behind a button in Settings) ----------
+async function logDlg() {
+  await modal("Log", (body) => {
+    const box = document.createElement("div"); box.className = "log";
+    const ctl = document.createElement("div"); ctl.className = "set-row";
+    const q = document.createElement("input"); q.placeholder = "Filter"; q.style.flex = "1";
+    let only = false;
+    const load = async () => {
+      const r = await api(`/api/log?days=3&problems=${only}&q=${encodeURIComponent(q.value)}`).catch(() => ({ lines: [] }));
+      box.innerHTML = r.lines.map((l) => `<div class="${/ (ERROR|CRITICAL|WARNING) /.test(l) || /^\s|Traceback/.test(l) ? "e" : ""}">${esc(l)}</div>`).join("") || '<span class="muted">Empty</span>';
+      box.scrollTop = box.scrollHeight;
+    };
+    q.oninput = () => { clearTimeout(q.t); q.t = setTimeout(load, 250); };
+    const pb = btn("Problems only", () => { only = !only; pb.classList.toggle("on", only); load(); });
+    ctl.append(q, pb);
+    body.append(ctl, box);
+    load();
+  }, [{ label: "Close", value: true, cls: "primary" }]);
+}
+
+// ---------- uninstall ----------
+async function uninstall() {
+  const s = await api("/api/settings").catch(() => ({}));
+  const what = s.installed ? "PDFactory and its settings will be removed. Your PDF files stay." :
+    "Shortcuts, start with Windows and the PDF association will be removed. The program folder stays.";
+  if (!(await vd.confirm(`Uninstall PDFactory?\n${what}`, { ok: "Uninstall", danger: true }))) return;
+  S.docs = []; persist();
+  await api("/api/uninstall", { body: {} }).catch(() => {});
+  window.close();
 }
 
 // ---------- quit ----------
