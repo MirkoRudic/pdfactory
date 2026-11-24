@@ -66,7 +66,7 @@ Alati: Select and move, Add text, Edit text, Highlight, Shape, Image, Fill form.
 - **Appearance**: tamna / svetla tema.
 - **Windows**: start sa Windows-om (prekidač), podrazumevani program (stanje + dugme), **Uninstall** → potvrda → instalirana kopija se ukloni cela (PDF fajlovi ostaju); razvojna kopija skida prečice, start sa Windows-om i PDF povezivanje, folder ostaje.
 - **Log**: veličina, „Show log“ otvara dnevnik u posebnom prozoru (filter, samo problemi), brisanje starijih od 30 dana. Dnevnik nije izlistan u samim podešavanjima.
-- **About**: kako app radi, „Made by …“, ispod „More“ koji otvara motore i licence: „Made by Mirko with Claude Opus 5.5 (Anthropic)“, licence (AGPL 3.0 + komponente).
+- **About**: kako app radi, „Made by Mirko with Claude Opus 5.5 (Anthropic)“, ispod toga „More“ koji otvara motore i licence (AGPL 3.0 + komponente).
 - **Version**: „Check and update“ → jedan klik proveri i odmah ažurira; posle ponovnog otvaranja piše „Updated: x.y.z“.
 - Nema liste prečica ni OCR podešavanja.
 - Sadržaj podešavanja i drugih prozora se ne pomera bočno (ni mišem, ni prevlačenjem, ni selekcijom); skroluje se samo uspravno.
