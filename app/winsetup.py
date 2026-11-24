@@ -55,9 +55,10 @@ def _app_exe() -> str:
         import shutil
         shutil.copy2(src, tmp)
         _set_exe_icon(tmp, ICON)
-        r = subprocess.run([str(tmp), "-c", "import sys,fitz;print(sys.prefix)"], capture_output=True, text=True,
-                           timeout=60, creationflags=NOWIN)
-        prefix = (r.stdout or "").strip()
+        r = subprocess.run([str(tmp), "-c", "import sys,pymupdf;print('PREFIX=' + sys.prefix)"], capture_output=True,
+                           text=True, timeout=60, creationflags=NOWIN)
+        # libraries may print warnings on stdout (PyMuPDF: "fitz API is deprecated"): only the marked line counts
+        prefix = next((l[7:] for l in (r.stdout or "").splitlines() if l.startswith("PREFIX=")), "").strip()
         if r.returncode or Path(prefix).resolve() != src.parents[1].resolve():
             log.warning("PDFactory.exe does not start the venv (rc=%s, %s %s)", r.returncode, prefix, r.stderr[-200:])
             tmp.unlink(missing_ok=True)
