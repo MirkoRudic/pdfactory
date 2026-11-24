@@ -451,7 +451,17 @@ def default_check():
     if now != s.get("was_default"):
         s["was_default"] = now
         settings.save(s)
-    return {"is_default": now, "lost": bool(lost), "windows": winsetup.WIN}
+    ask = (DATA / "ask_default").exists()          # installer option "Make PDFactory the default": asked inside the app
+    if ask and now:
+        (DATA / "ask_default").unlink(missing_ok=True)
+        ask = False
+    return {"is_default": now, "lost": bool(lost), "ask": ask, "windows": winsetup.WIN}
+
+
+@app.post("/api/default-ask-done")
+def default_ask_done():
+    (DATA / "ask_default").unlink(missing_ok=True)
+    return {"ok": True}
 
 
 @app.post("/api/default-app")

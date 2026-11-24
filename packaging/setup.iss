@@ -51,7 +51,8 @@ Name: "{autodesktop}\PDFactory"; Filename: "{app}\python\PDFactory.exe"; Paramet
 Name: "{userstartup}\PDFactory"; Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"" --tiho"; WorkingDir: "{app}"; IconFilename: "{app}\assets\pdfabrika.ico"; Tasks: autostart
 
 [Run]
-Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"" --default"; WorkingDir: "{app}"; Tasks: defaultapp; Flags: nowait; Check: not WizardSilent
+; the default app is chosen in Windows Settings; the app asks for it at its first start, with an explanation
+Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"" --want-default"; WorkingDir: "{app}"; Tasks: defaultapp; Flags: runhidden waituntilterminated; Check: not WizardSilent
 Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"""; WorkingDir: "{app}"; Description: "Open PDFactory"; Flags: postinstall nowait skipifsilent
 ; update from inside the app (silent): start the new version again
 Filename: "{app}\python\PDFactory.exe"; Parameters: """{app}\PDFactory.pyw"""; WorkingDir: "{app}"; Flags: nowait; Check: WizardSilent

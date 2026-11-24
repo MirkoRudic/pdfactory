@@ -245,3 +245,4 @@ button.link:hover { text-decoration: underline; background: none; }
 .ver-st .ok { display: inline-flex; align-items: center; gap: 4px; }
 .ver-st svg { width: 14px; height: 14px; }
 .accent { color: var(--accent); }
+.dlg-msg { margin: 0; text-align: center; line-height: 1.6; }

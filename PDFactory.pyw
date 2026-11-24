@@ -259,7 +259,13 @@ def main():
             pass
         winsetup.unregister()
         return
-    if "--default" in flags:            # Setup.exe task "Set as default PDF app"
+    if "--want-default" in flags:       # Setup.exe task "Make PDFactory the default": the app asks, with context, on start
+        import winsetup
+        DATA.mkdir(parents=True, exist_ok=True)
+        (DATA / "ask_default").write_text("1", encoding="utf-8")
+        winsetup.register()
+        return
+    if "--default" in flags:            # opens Windows Settings directly (kept for older installers)
         import tempdir
         import winsetup
         tempdir.init(DATA / "tmp")

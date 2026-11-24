@@ -13,6 +13,7 @@ Windows 10/11 korisnik bez tehničkog znanja: ne zna za Python, git ni portove, 
 
 ## 1. Instalacija i Windows
 
+- Opcija „Make PDFactory the default“ u čarobnjaku → instalacija ne otvara Windows podešavanja; pri prvom pokretanju app pita sa objašnjenjem („Windows asks you to confirm…“) i tek na „Open Windows settings“ otvara izbor.
 - Dvoklik na `PDFactory-Setup.exe` → pravi čarobnjak sa ikonicom: izbor foldera, prečice, start sa Windows-om, podrazumevani PDF program. Bez cmd prozora, bez administratorskih prava.
 - Windows pri prvom dvokliku jednom pita „Open“ (nepotpisan fajl) → to je jedino pitanje van čarobnjaka.
 - Deinstalacija (Windows → Aplikacije) → briše program, prečice, registraciju i `data`.
