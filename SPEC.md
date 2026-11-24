@@ -6,8 +6,8 @@ Oblik scenarija: **kad uradim X → desi se Y**. Tehnika i zamke su u `CLAUDE.md
 ## Svrha
 Lokalna, besplatna zamena za Adobe Reader na Windows-u: čitanje, izmene, strane, OCR, štampa. Sve radi na računaru, bez naloga i interneta (internet samo za proveru nove verzije).
 
-## Za koga
-Mirko i drugari kojima pošalje instalaciju. Korisnik ne zna ništa o Python-u, git-u ni portovima.
+## Ciljni korisnik
+Windows 10/11 korisnik bez tehničkog znanja: ne zna za Python, git ni portove, instalira dvoklikom.
 
 ---
 
@@ -79,7 +79,7 @@ Alati: Select and move, Add text, Edit text, Highlight, Shape, Image, Fill form.
 
 - Report a problem → polje za opis + (uključeno) dnevnik. Korisnik **vidi tačno šta se šalje**.
 - U dnevniku nema dokumenata, sadržaja ni imena fajlova i putanja (zamenjeni sa `<file>` / `<path>`).
-- Send → otvori se mejl program sa popunjenim mejlom za Mirka; korisnik sam klikne Pošalji. Predugačak tekst ide i u clipboard.
+- Send → otvori se mejl program sa popunjenim mejlom na adresu za prijave (`REPORT_TO`); korisnik sam klikne Pošalji. Predugačak tekst ide i u clipboard.
 
 ## 10. Izgled
 
