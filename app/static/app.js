@@ -1280,8 +1280,6 @@ async function settingsDlg() {
         } else {
           srow(b, "PDF app", btn("Set as default", async () => { await api("/api/default-app", { body: {} }); watchDefault(); }));
         }
-        const un = btn(icon("trash") + "Uninstall", () => uninstall()); un.classList.add("danger-btn");
-        srow(b, "Remove PDFactory from this computer", un);
       }
 
       const lg = sec("Log");
@@ -1328,6 +1326,11 @@ async function settingsDlg() {
         el.outerHTML = r.ok ? '<span class="muted">Up to date</span>' : '<span class="muted">Check failed</span>';
       }));
       v.appendChild(vr);
+      if (s.windows) {                                   // last, as usual in Windows programs (P9)
+        const u = sec("Uninstall");
+        const un = btn(icon("trash") + "Uninstall", () => uninstall()); un.classList.add("danger-btn");
+        srow(u, "Remove PDFactory from this computer", un);
+      }
     };
     // after "Set as default": Windows Settings is a separate window; watch until PDFactory is the default (or the dialog closes)
     const watchDefault = () => {
