@@ -284,6 +284,9 @@ def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     flags = {a for a in sys.argv[1:] if a.startswith("--")}
     path = str(Path(args[0]).resolve()) if args else None
+    if path and Path(path).stem == "choose-default":   # winsetup marker: PDFactory was just picked, nothing to open
+        Path(path).unlink(missing_ok=True)
+        path = None
     if "--instaliraj" in flags:
         install()
     if "--uninstall" in flags:          # called by the uninstaller (Setup.exe)
@@ -305,8 +308,7 @@ def main():
         import winsetup
         tempdir.init(DATA / "tmp")
         winsetup.register()
-        winsetup.open_default_apps()
-        time.sleep(9)                   # keeps the thread that brings Settings to the front alive
+        winsetup.open_default_apps().join(300)   # keeps the Windows dialog / Settings thread alive
         return
     if "--restart" in flags and alive():
         stop_old()

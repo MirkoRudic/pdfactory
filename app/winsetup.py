@@ -365,9 +365,29 @@ def _front_settings_window(timeout=8.0):
     return False
 
 
-def _open_with_dialog() -> bool:
-    """Windows' own "How do you want to open .pdf files?" with "Always" (SHOpenWithDialog).
-    Settings → Default apps on Windows 10 has no search and .pdf is deep in a long list."""
+# a tiny file of the type, only so Windows shows its "Open with" list; when it comes back to this app
+# (the user picked it), the launcher just brings the window forward (is_marker)
+MARKER = "choose-default"
+
+
+def is_marker(path) -> bool:
+    return bool(path) and Path(path).stem == MARKER
+
+
+def _marker(ext: str) -> Path:
+    d = Path(__file__).resolve().parents[1] / "data" / "tmp"
+    d.mkdir(parents=True, exist_ok=True)
+    f = d / (MARKER + ext)
+    body = (b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
+            b"3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n")
+    f.write_bytes(body if ext == ".pdf" else b"")
+    return f
+
+
+def _open_with_dialog(ext: str) -> bool:
+    """Windows' own "How do you want to open this file?" with "Always use this app" (SHOpenWithDialog, P10).
+    Measured 26.11.2026, Windows 10: OAIF_REGISTER_EXT / FORCE_REGISTRATION only show "To change your default
+    apps, go to Settings" and return S_OK; Settings → Default apps there has no search. So a real file + EXEC."""
     import ctypes
     from ctypes import wintypes
 
@@ -377,17 +397,16 @@ def _open_with_dialog() -> bool:
     f = ctypes.windll.shell32.SHOpenWithDialog
     f.argtypes = [wintypes.HWND, ctypes.POINTER(OPENASINFO)]
     f.restype = ctypes.c_long
-    # OAIF_ALLOW_REGISTRATION | OAIF_REGISTER_EXT | OAIF_FORCE_REGISTRATION: the choice is saved as the default
-    info = OPENASINFO(".pdf", None, 0x01 | 0x02 | 0x20)
+    info = OPENASINFO(str(_marker(ext)), None, 0x01 | 0x04)     # OAIF_ALLOW_REGISTRATION | OAIF_EXEC
     ctypes.windll.ole32.CoInitialize(None)
     hr = f(None, ctypes.byref(info)) & 0xFFFFFFFF
-    log.info("open-with dialog: 0x%08X", hr)
+    log.info("open-with dialog %s: 0x%08X", ext, hr)
     return hr in (0, 0x800704C7)                    # S_OK or cancelled by the user
 
 
 def _choose_default():
     try:
-        if _open_with_dialog():
+        if _open_with_dialog(".pdf"):
             return
     except Exception:
         log.exception("open-with dialog failed")
@@ -395,10 +414,12 @@ def _choose_default():
     _front_settings_window()
 
 
-def open_default_apps():
-    """Windows lets only the user pick the default program: its "open .pdf with" dialog, else Settings."""
+def open_default_apps() -> threading.Thread:
+    """Windows lets only the user pick the default program: its "Open with" list, else Settings (P10)."""
     register()
-    threading.Thread(target=_choose_default, name="izbor-podrazumevanog", daemon=True).start()
+    t = threading.Thread(target=_choose_default, name="choose-default", daemon=True)
+    t.start()
+    return t
 
 
 def unregister():
