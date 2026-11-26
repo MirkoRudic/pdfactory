@@ -1,7 +1,7 @@
 // PDFactory - UI. Plain JS, no build step.
 // Coordinates of objects are display points of the page (rotation applied, origin top-left, 1 = 1 pt).
-window.VD_LABELS = { cancel: "Cancel", ok: "Continue", message: "OK", save: "Save" };   // UI is English (T1)
 "use strict";
+window.VD_LABELS = { cancel: "Cancel", ok: "Continue", message: "OK", save: "Save" };   // UI is English (T1)
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const PT = 96 / 72;                       // px per pt at 100%
