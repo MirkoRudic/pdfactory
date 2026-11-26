@@ -49,7 +49,23 @@ class Source:
         return {"id": self.id, "name": self.name, "path": self.path, "pages": pages,
                 "hasText": any(len(p.get_text("text").strip()) > 20 for p in self.doc),
                 # a page with a picture and (almost) no text is a scan: recognized in the background
-                "needsOcr": any(not p.get_text("text").strip() and p.get_images() for p in self.doc)}
+                "needsOcr": any(_needs_ocr(p) for p in self.doc)}
+
+
+def _needs_ocr(p) -> bool:
+    """A scan: a picture and (almost) no visible text, and no invisible OCR layer yet. Counting all text
+    re-recognized pages that already had a short OCR layer (one more layer on every open + save); counting
+    none skipped scans with a printed header or page number (QA 27.11.2026)."""
+    if not p.get_images():
+        return False
+    visible = invisible = 0
+    for sp in p.get_texttrace():
+        n = sum(1 for c in sp["chars"] if chr(c[0]).strip())
+        if sp["type"] == 3:
+            invisible += n
+        else:
+            visible += n
+    return visible < 20 and invisible == 0
 
 
 # ---------- opening ----------
@@ -588,7 +604,7 @@ def ocr_source(src_id: str, lang: str, tessdata: str, fontfile: str | None):
                 p = s.doc[i]
                 # only pages without any text: a page with an OCR layer from an earlier save is not
                 # recognized again (with "< 20 chars" every open + save added one more layer)
-                need = not p.get_text("text").strip()
+                need = _needs_ocr(p)
                 pix = p.get_pixmap(dpi=300) if need else None  # grayscale pixmaps give no text (measured)
                 prect = p.rect
             if need:
