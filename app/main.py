@@ -84,7 +84,8 @@ def index():
         html = html.replace(f'"{f}"', f'"/static/{f}?v={_hash(APP / "static" / f)}"')
     html = html.replace('"/logo.png"', f'"/logo.png?v={_hash(APP_DIR / "assets" / "pdfactory_256.png")}"')   # UI11
     s = settings.load()
-    html = html.replace('data-theme="dark"', f'data-theme="{s.get("theme", "dark")}"')
+    theme = s.get("theme") if s.get("theme") in ("dark", "light") else "dark"
+    html = html.replace('data-theme="dark"', f'data-theme="{theme}"')
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 
@@ -437,7 +438,9 @@ def get_settings():
 @app.post("/api/settings")
 def set_settings(body: dict = Body(...)):
     s = settings.load()
-    for k in ("theme", "ocr_lang", "tessdata"):
+    if body.get("theme") in ("dark", "light"):   # goes into index.html as is: only known values
+        s["theme"] = body["theme"]
+    for k in ("ocr_lang", "tessdata"):
         if k in body:
             s[k] = body[k]
     settings.save(s)
