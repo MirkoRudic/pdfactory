@@ -94,7 +94,8 @@ function undo(redo = false) {
   to.push(snapshot(d));
   const s = JSON.parse(from.pop());
   d.items = s.items; d.objects = s.objects; d.forms = s.forms;
-  d.dirty = d.hist.length > 0;      // back at the first step = as it was opened or last saved
+  // back at the first step = as it was opened or last saved; a doc restored with unsaved edits stays unsaved
+  d.dirty = d.hist.length > 0 || !!d.base;
   S.sel = null; renderAll(); persist();
 }
 async function openPaths(paths) {
@@ -150,7 +151,7 @@ async function restore() {
   let ws; try { ws = JSON.parse(localStorage.getItem("pdfactory.ws") || "null"); } catch (e) { ws = null; }
   if (!ws || !ws.docs || !ws.docs.length) return;
   if (ws.pid === S.pid) {
-    for (const d of ws.docs) S.docs.push({ ...d, hist: [], fut: [], osel: new Set(), scroll: 0 });
+    for (const d of ws.docs) S.docs.push({ ...d, base: !!(d.dirty || d.base), hist: [], fut: [], osel: new Set(), scroll: 0 });
     S.cur = ws.cur;
     return;
   }
@@ -162,7 +163,7 @@ async function restore() {
       const info = r.docs[0];
       const srcs = new Set(d.items.map((i) => i.src));
       if (srcs.size === 1 && d.dirty) {
-        const nd = { ...d, hist: [], fut: [], osel: new Set(), scroll: 0, srcInfo: { [info.id]: info } };
+        const nd = { ...d, base: true, hist: [], fut: [], osel: new Set(), scroll: 0, srcInfo: { [info.id]: info } };
         nd.items = d.items.filter((i) => i.page < info.pages.length).map((i) => ({ ...i, src: info.id }));
         S.docs.push(nd);
       } else {
@@ -1277,7 +1278,7 @@ async function save(ask = false) {
   if (!r || r.cancelled) return;
   const info = r.doc;
   d.name = info.name; d.path = info.path; d.items = itemsFromInfo(info); d.objects = {}; d.forms = {};
-  d.srcInfo = { [info.id]: info }; d.dirty = false; d.hist = []; d.fut = []; d.osel.clear(); S.sel = null;
+  d.srcInfo = { [info.id]: info }; d.dirty = false; d.base = false; d.hist = []; d.fut = []; d.osel.clear(); S.sel = null;
   formCache.clear();
   renderAll(); persist();
   savedToast(r.path);
