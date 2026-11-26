@@ -293,10 +293,21 @@ def compose(items: list[dict], objects: dict | None = None, forms: dict | None =
 
 def _apply_forms(page, vals: dict):
     for w in page.widgets() or []:
-        if w.field_name in vals:
-            v = vals[w.field_name]
+        # a merged file with an already used field name gets it renamed by insert_pdf ("Text1 [13]")
+        name = w.field_name if w.field_name in vals else re.sub(r" \[\d+\]$", "", w.field_name)
+        if name in vals:
+            v = vals[name]
             try:
-                if w.field_type in (2, 5):  # checkbox, radio
+                if w.field_type == 5 and isinstance(v, str):  # radio: the chosen option's on-state
+                    # set /AS directly: field_value + update() leave every option of the group on
+                    on = w.on_state()
+                    doc = page.parent
+                    doc.xref_set_key(w.xref, "AS", "/" + on if v == on else "/Off")
+                    par = doc.xref_get_key(w.xref, "Parent")
+                    if v == on and par[0] == "xref":
+                        doc.xref_set_key(int(par[1].split()[0]), "V", "/" + on)
+                    continue
+                elif w.field_type in (2, 5):  # checkbox (radio saved by an older version: True/False)
                     w.field_value = w.on_state() if v else "Off"
                 else:
                     w.field_value = str(v)

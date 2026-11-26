@@ -1093,7 +1093,15 @@ async function buildForms(pg, it) {
   for (const f of fields) {
     let el;
     const v = f.name in vals ? vals[f.name] : f.value;
-    if (f.type === "CheckBox" || f.type === "RadioButton") {
+    if (f.type === "RadioButton") {
+      // one value per group: the chosen option's on-state (a boolean turned every option on)
+      el = document.createElement("input"); el.type = "checkbox"; el.dataset.radio = f.name;
+      el.checked = v === f.on || (v === true && f.value === f.on);
+      el.onchange = () => {
+        commit(); vals[f.name] = el.checked ? f.on : "Off"; persist();
+        pg.querySelectorAll("input[data-radio]").forEach((x) => { if (x !== el && x.dataset.radio === f.name) x.checked = false; });
+      };
+    } else if (f.type === "CheckBox") {
       el = document.createElement("input"); el.type = "checkbox"; el.checked = v === true || (v && v !== "Off");
       el.onchange = () => { commit(); vals[f.name] = el.checked; persist(); };
     } else if (f.options && f.options.length) {
