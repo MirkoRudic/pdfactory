@@ -49,7 +49,7 @@ class Source:
         return {"id": self.id, "name": self.name, "path": self.path, "pages": pages,
                 "hasText": any(len(p.get_text("text").strip()) > 20 for p in self.doc),
                 # a page with a picture and (almost) no text is a scan: recognized in the background
-                "needsOcr": any(len(p.get_text("text").strip()) < 20 and p.get_images() for p in self.doc)}
+                "needsOcr": any(not p.get_text("text").strip() and p.get_images() for p in self.doc)}
 
 
 # ---------- opening ----------
@@ -583,7 +583,9 @@ def ocr_source(src_id: str, lang: str, tessdata: str, fontfile: str | None):
             # so pages keep rendering while a long scan is being recognized
             with s.lock:
                 p = s.doc[i]
-                need = len(p.get_text("text").strip()) < 20
+                # only pages without any text: a page with an OCR layer from an earlier save is not
+                # recognized again (with "< 20 chars" every open + save added one more layer)
+                need = not p.get_text("text").strip()
                 pix = p.get_pixmap(dpi=300) if need else None  # grayscale pixmaps give no text (measured)
                 prect = p.rect
             if need:
@@ -606,7 +608,9 @@ def ocr_source(src_id: str, lang: str, tessdata: str, fontfile: str | None):
                             morph = None
                             if tl > 0:
                                 k = r.width / tl
-                                morph = (pt, fitz.Matrix(k, 1)) if 0.2 < k < 5 else None
+                                # morph works in PDF space: on a /Rotate 90/270 page the word runs along y
+                                mk = fitz.Matrix(1, k) if p.rotation % 180 else fitz.Matrix(k, 1)
+                                morph = (pt, mk) if 0.2 < k < 5 else None
                             p.insert_text(pt, txt, fontsize=fs, render_mode=3, rotate=p.rotation, morph=morph, **kw)
                         except Exception:
                             p.insert_text(pt, txt, fontsize=fs, render_mode=3, rotate=p.rotation, **kw)
