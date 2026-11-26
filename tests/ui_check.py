@@ -1,5 +1,6 @@
 """UI check in a real browser (R7): screenshots of every mode. Usage: python ui_check.py <url> <pdf> <pdf2> <outdir>"""
 import json, sys, time, urllib.request
+from pathlib import Path
 from playwright.sync_api import sync_playwright
 url, pdf, pdf2, out = sys.argv[1:5]
 def post(p, b):
