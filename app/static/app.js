@@ -1663,7 +1663,10 @@ addEventListener("drop", async (e) => {
 async function pollInbox() {
   try {
     const r = await api("/api/inbox");
+    // the server was restarted without this window asking (update from elsewhere, --restart): its
+    // document ids are gone, so reload and restore the work from storage
     r.docs.forEach(addDoc);
+    if (r.pid && S.pid && r.pid !== S.pid) { persist(); location.reload(); return; }
     if (r.errors.length) vd.message(r.errors.join("\n"));
     if (r.askQuit) quit();
   } catch (e) { /* server restarting */ }

@@ -176,7 +176,7 @@ def inbox():
             docs.append(src.info())
         except pdfops.UserError as e:
             errors.append(f"{Path(it['path']).name}: {e}")
-    return {"docs": docs, "errors": errors, "askQuit": ask}
+    return {"docs": docs, "errors": errors, "askQuit": ask, "pid": os.getpid()}
 
 
 @app.get("/api/recent")
