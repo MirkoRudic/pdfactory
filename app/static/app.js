@@ -1209,6 +1209,9 @@ function rotObj(o, W, H, by) {     // clockwise steps of 90; W x H = page size b
     } else if (o.type === "text" || o.type === "fix") {
       const cx = o.x + o.w / 2, cy = o.y + o.h / 2; const nx = cH - cy, ny = cx;
       o.x = nx - o.w / 2; o.y = ny - o.h / 2;
+    } else if (o.type === "image") {   // turns with the page around its center (swapping w/h squashed it)
+      const cx = o.x + o.w / 2, cy = o.y + o.h / 2; const nx = cH - cy, ny = cx;
+      o.x = nx - o.w / 2; o.y = ny - o.h / 2; o.angle = ((o.angle || 0) + 90) % 360;
     } else { [o.x, o.y, o.w, o.h] = [cH - (o.y + o.h), o.x, o.h, o.w]; }
     if (o.orig) { const r = o.orig; o.orig = [cH - r[3], r[0], cH - r[1], r[2]]; }
   }
