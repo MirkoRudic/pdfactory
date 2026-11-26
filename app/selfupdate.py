@@ -100,17 +100,24 @@ def ready(tmp_dir: Path) -> str:
 
 
 def run(setup: Path, tmp_dir: Path, relaunch: str = "window"):
-    """Runs the installer silently. relaunch: window = start the app again (the open window reloads),
-    tiho = start it in the tray only, none = do not start it (the user quit)."""
+    """Runs the installer silently once this process has exited. relaunch: window = start the app again
+    (the open window reloads), tiho = start it in the tray only, none = do not start it (the user quit).
+    Started right away, the installer found the app still running, could not close it (no window) and
+    aborted with suppressed message boxes (measured 26.11.2026, Windows 10): so a hidden PowerShell waits
+    for this PID first."""
     app_dir = Path(__file__).resolve().parents[1]
     args = [str(setup), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", f"/DIR={app_dir}",
             f"/RELAUNCH={relaunch}", f"/LOG={Path(tmp_dir) / 'setup.log'}"]   # the log says what went wrong, if anything
-    log.info("running %s", " ".join(args))
-    flags = 0x00000008 | 0x00000200 | 0x01000000 if sys.platform == "win32" else 0   # DETACHED | NEW_GROUP | BREAKAWAY_FROM_JOB
+    log.info("running %s (after pid %s exits)", " ".join(args), os.getpid())
+    q = lambda s: "'" + str(s).replace("'", "''") + "'"
+    ps = (f"Wait-Process -Id {os.getpid()} -Timeout 60 -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 500; "
+          f"Start-Process -FilePath {q(setup)} -ArgumentList @({','.join(q(a) for a in args[1:])})")
+    cmd = ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-Command", ps]
+    flags = 0x00000008 | 0x00000200 | 0x08000000 | 0x01000000 if sys.platform == "win32" else 0   # DETACHED | NEW_GROUP | NO_WINDOW | BREAKAWAY_FROM_JOB
     try:
-        subprocess.Popen(args, cwd=str(app_dir), creationflags=flags, close_fds=True)
+        subprocess.Popen(cmd, cwd=str(app_dir), creationflags=flags, close_fds=True)
     except OSError:                      # breakaway not allowed in this job: without it
-        subprocess.Popen(args, cwd=str(app_dir), creationflags=flags & ~0x01000000, close_fds=True)
+        subprocess.Popen(cmd, cwd=str(app_dir), creationflags=flags & ~0x01000000, close_fds=True)
 
 
 def apply(tmp_dir: Path, relaunch: str = "window") -> dict:
