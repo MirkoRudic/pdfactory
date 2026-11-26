@@ -323,8 +323,8 @@ def _apply_forms(page, vals: dict):
                     doc = page.parent
                     doc.xref_set_key(w.xref, "AS", "/" + on if v == on else "/Off")
                     par = doc.xref_get_key(w.xref, "Parent")
-                    if v == on and par[0] == "xref":
-                        doc.xref_set_key(int(par[1].split()[0]), "V", "/" + on)
+                    if par[0] == "xref" and (v == on or v == "Off"):
+                        doc.xref_set_key(int(par[1].split()[0]), "V", "/" + (on if v == on else "Off"))
                     continue
                 elif w.field_type in (2, 5):  # checkbox (radio saved by an older version: True/False)
                     w.field_value = w.on_state() if v else "Off"
