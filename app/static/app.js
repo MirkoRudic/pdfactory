@@ -84,7 +84,8 @@ function snapshot(d) { return JSON.stringify({ items: d.items, objects: d.object
 function commit(d = D()) {
   if (!d) return;
   d.hist.push(snapshot(d)); if (d.hist.length > 100) d.hist.shift();
-  d.fut = []; d.dirty = true; persist(); renderChrome();
+  // callers change the document right after commit(): save it once they are done (it was saved before)
+  d.fut = []; d.dirty = true; setTimeout(persist); renderChrome();
 }
 function undo(redo = false) {
   const d = D(); if (!d) return;
