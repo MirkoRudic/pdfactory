@@ -155,7 +155,10 @@ def page_text(src_id: str, page: int):
                         r |= fitz.Rect(sp["bbox"])
                     r = r * rm
                     c = main["color"]
+                    dx, dy = line.get("dir", (1, 0))
+                    vertical = (abs(dy) > abs(dx)) != (p.rotation % 180 == 90)   # runs top-to-bottom on screen
                     lines.append({"bbox": [round(r.x0, 2), round(r.y0, 2), round(r.x1, 2), round(r.y1, 2)],
+                                  "vertical": vertical,
                                   "text": "".join(sp["text"] for sp in line["spans"]).strip(),
                                   "size": round(main["size"], 1), "font": fonts.match(main["font"]), "pdfFont": main["font"],
                                   "bold": bool(main["flags"] & 16) or "bold" in main["font"].lower(),

@@ -1034,7 +1034,7 @@ async function fixAt(px, py, pg, it) {
   if (!s) { if (it.rot) toast("Edit text works on pages not rotated in Pages. Save and try again."); return; }
   // a line that runs top-to-bottom on screen (sideways text, a /Rotate 90 page) would be redacted only in
   // part and rewritten horizontally over its neighbours (QA 27.11.2026): not editable
-  if ((s.text || "").length > 1 && s.bbox[3] - s.bbox[1] > 1.5 * (s.bbox[2] - s.bbox[0])) { toast("Edit text works on horizontal lines only."); return; }
+  if (s.vertical) { toast("Edit text works on horizontal lines only."); return; }
   const used = (D().objects[it.uid] || []).some((o) => o.type === "fix" && o.orig.join() === s.bbox.join());
   if (used) return;
   $$(".spanhint", pg).forEach((x) => x.remove());
