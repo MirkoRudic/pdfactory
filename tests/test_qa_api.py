@@ -59,6 +59,9 @@ finally:
     main.app.state.stop = main.app.state.quit = None
 check("launcher keeps the window on --restart", '"--restart" in flags) and app_windows()' in (ROOT / "PDFactory.pyw").read_text(encoding="utf-8"))
 
+# 5. inbox tells the window which server it talks to (a restart it did not ask for -> reload)
+check("inbox has the server pid", c.get("/api/inbox").json().get("pid") == main.os.getpid())
+
 shutil.rmtree(W, ignore_errors=True)
 print("FAILS:", fails if fails else "none")
 sys.exit(1 if fails else 0)

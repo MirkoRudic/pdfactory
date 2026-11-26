@@ -33,7 +33,7 @@ with sync_playwright() as pw:
     pg.keyboard.press("End"); pg.keyboard.type(" IZMENJENO")
     pg.click("text=Fill form"); pg.wait_for_timeout(800)
     pg.screenshot(path=f"{out}/5_edit_shape_fix_form.png")
-    pg.set_input_files("#fileImg", str(Path(__file__).resolve().parents[1] / "assets" / "pdfactory_512.png"); pg.wait_for_timeout(1200)
+    pg.set_input_files("#fileImg", str(Path(__file__).resolve().parents[1] / "assets" / "pdfactory_512.png")); pg.wait_for_timeout(1200)
     pg.screenshot(path=f"{out}/6_image.png")
     pg.click('[data-mode="pages"]'); pg.wait_for_timeout(1000)
     post("api/open-external", {"path": pdf2}); pg.wait_for_timeout(2000)

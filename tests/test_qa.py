@@ -90,5 +90,20 @@ if td:
 else:
     print("skip OCR (no tessdata)")
 
+# 6. a scan with a short printed header (fax line, page number) is still recognized
+hd = fitz.open(); hp = hd.new_page(); hp.insert_image(hp.rect, pixmap=pix); hp.insert_text((20, 20), "Fax 12", fontsize=8)
+hd.save(W / "scan_header.pdf")
+check("scan with a printed header needsOcr", P.open_path(str(W / "scan_header.pdf")).info()["needsOcr"])
+
+# 7. "vertical" in page_text: only lines that run top-to-bottom on screen (short labels stay editable)
+v = fitz.open()
+for rot in (0, 90):
+    vp = v.new_page(); vp.insert_text((72, 90), "1.", fontsize=12); vp.insert_text((72, 120), "Iznos: 100.000 RSD", fontsize=12)
+    vp.set_rotation(rot)
+v.save(W / "vert.pdf"); vs = P.open_path(str(W / "vert.pdf"))
+l0 = [l["vertical"] for l in P.page_text(vs.id, 0)["lines"]]; l1 = [l["vertical"] for l in P.page_text(vs.id, 1)["lines"]]
+check("short horizontal label is not vertical", l0 == [False, False], l0)
+check("line on /Rotate 90 page is vertical", l1 == [True, True], l1)
+
 print("FAILS:", fails if fails else "none")
 sys.exit(1 if fails else 0)
