@@ -110,8 +110,10 @@ def run(setup: Path, tmp_dir: Path, relaunch: str = "window"):
             f"/RELAUNCH={relaunch}", f"/LOG={Path(tmp_dir) / 'setup.log'}"]   # the log says what went wrong, if anything
     log.info("running %s (after pid %s exits)", " ".join(args), os.getpid())
     q = lambda s: "'" + str(s).replace("'", "''") + "'"
+    # Start-Process joins ArgumentList with spaces: a value with a space goes in double quotes (/DIR="C:\a b")
+    pa = [a if " " not in a else a.split("=", 1)[0] + '="' + a.split("=", 1)[1] + '"' for a in args[1:]]
     ps = (f"Wait-Process -Id {os.getpid()} -Timeout 60 -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 500; "
-          f"Start-Process -FilePath {q(setup)} -ArgumentList @({','.join(q(a) for a in args[1:])})")
+          f"Start-Process -FilePath {q(setup)} -ArgumentList @({','.join(q(a) for a in pa)})")
     cmd = ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-Command", ps]
     flags = 0x00000008 | 0x00000200 | 0x08000000 | 0x01000000 if sys.platform == "win32" else 0   # DETACHED | NEW_GROUP | NO_WINDOW | BREAKAWAY_FROM_JOB
     try:
