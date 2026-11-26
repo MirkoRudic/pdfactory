@@ -1477,8 +1477,8 @@ async function checkDefault() {
   if (r && r.ask) {                              // chosen in the installer: Windows lets only the user confirm it
     await api("/api/default-ask-done", { body: {} }).catch(() => {});
     const go = await modal("Default PDF app", (body) => {
-      body.innerHTML = `<p class="dlg-msg">Windows asks you to confirm this yourself.<br>In the window that opens, choose <b>PDFactory</b> for <b>.pdf</b>.</p>`;
-    }, [{ label: "Not now", value: false }, { label: "Open Windows settings", value: true, cls: "primary" }]);
+      body.innerHTML = `<p class="dlg-msg">Windows asks you to confirm this yourself.<br>In the window that opens, choose <b>PDFactory</b>.</p>`;
+    }, [{ label: "Not now", value: false }, { label: "Choose", value: true, cls: "primary" }]);
     if (go) await api("/api/default-app", { body: {} }).catch(() => {});
     return;
   }

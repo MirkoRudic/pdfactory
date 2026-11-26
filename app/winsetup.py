@@ -365,11 +365,40 @@ def _front_settings_window(timeout=8.0):
     return False
 
 
-def open_default_apps():
-    """Windows lets only the user pick the default program: opens the PDFactory page in Settings, in front."""
-    register()
+def _open_with_dialog() -> bool:
+    """Windows' own "How do you want to open .pdf files?" with "Always" (SHOpenWithDialog).
+    Settings → Default apps on Windows 10 has no search and .pdf is deep in a long list."""
+    import ctypes
+    from ctypes import wintypes
+
+    class OPENASINFO(ctypes.Structure):
+        _fields_ = [("pcszFile", wintypes.LPCWSTR), ("pcszClass", wintypes.LPCWSTR), ("oaifInFlags", ctypes.c_int)]
+
+    f = ctypes.windll.shell32.SHOpenWithDialog
+    f.argtypes = [wintypes.HWND, ctypes.POINTER(OPENASINFO)]
+    f.restype = ctypes.c_long
+    # OAIF_ALLOW_REGISTRATION | OAIF_REGISTER_EXT | OAIF_FORCE_REGISTRATION: the choice is saved as the default
+    info = OPENASINFO(".pdf", None, 0x01 | 0x02 | 0x20)
+    ctypes.windll.ole32.CoInitialize(None)
+    hr = f(None, ctypes.byref(info)) & 0xFFFFFFFF
+    log.info("open-with dialog: 0x%08X", hr)
+    return hr in (0, 0x800704C7)                    # S_OK or cancelled by the user
+
+
+def _choose_default():
+    try:
+        if _open_with_dialog():
+            return
+    except Exception:
+        log.exception("open-with dialog failed")
     os.startfile("ms-settings:defaultapps?registeredAppUser=PDFactory")
-    threading.Thread(target=_front_settings_window, name="podesavanja-napred", daemon=True).start()
+    _front_settings_window()
+
+
+def open_default_apps():
+    """Windows lets only the user pick the default program: its "open .pdf with" dialog, else Settings."""
+    register()
+    threading.Thread(target=_choose_default, name="izbor-podrazumevanog", daemon=True).start()
 
 
 def unregister():

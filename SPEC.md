@@ -13,14 +13,14 @@ Windows 10/11 korisnik bez tehničkog znanja: ne zna za Python, git ni portove, 
 
 ## 1. Instalacija i Windows
 
-- Opcija „Make PDFactory the default“ u čarobnjaku → instalacija ne otvara Windows podešavanja; pri prvom pokretanju app pita sa objašnjenjem („Windows asks you to confirm…“) i tek na „Open Windows settings“ otvara izbor.
+- Opcija „Make PDFactory the default“ u čarobnjaku → instalacija ne otvara Windows podešavanja; pri prvom pokretanju app pita sa objašnjenjem („Windows asks you to confirm…“) i tek na „Choose“ otvara Windows prozor „How do you want to open .pdf files?“ sa PDFactory u listi (jedan klik, bez traženja .pdf u podešavanjima).
 - Dvoklik na `PDFactory-Setup.exe` → pravi čarobnjak sa ikonicom: izbor foldera, prečice, start sa Windows-om, podrazumevani PDF program. Bez cmd prozora, bez administratorskih prava.
 - Windows pri prvom dvokliku jednom pita „Open“ (nepotpisan fajl) → to je jedino pitanje van čarobnjaka.
 - Deinstalacija (Windows → Aplikacije) → briše program, prečice, registraciju i `data`.
 - Start sa Windows-om uključen → app se pokrene bez prozora, samo ikonica pored sata.
 - Dvoklik na PDF (kad je podrazumevani) → fajl se otvori u PDFactory; ako app već radi, otvori se u istom prozoru.
 - Ime i ikonica u Windows-u su „PDFactory“ (nikad „Python“). PDF fajlovi imaju svoju ikonicu: bela strana, crvena ivica, fabrika sa „PDF“.
-- Settings → Windows → „Set as default“ → Windows prozor za izbor se otvori **ispred** app; posle izbora Settings sam pokaže „PDFactory is the default“.
+- Settings → Windows → „Set as default“ → Windows prozor „How do you want to open .pdf files?“ se otvori **ispred** app (Windows 10 i 11; ako ga Windows ne otvori, otvore se podešavanja); posle izbora Settings sam pokaže „PDFactory is the default“.
 - Server se ne pokrene za 15 s → fajl se otvori u Edge-u, da korisnik ne ostane bez ičega.
 
 ## 2. Otvaranje i čitanje
