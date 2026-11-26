@@ -40,6 +40,25 @@ for p in new:
 src = (ROOT / "PDFactory.pyw").read_text(encoding="utf-8")
 check("marker check uses data/tmp", 'Path(path).parent == (DATA / "tmp").resolve()' in src)
 
+# 4. restart after an update keeps the window (V2/V5): only the server stops
+import types
+calls = []
+real_os, real_sleep, real_uoq = main.os, main.time.sleep, main._update_on_quit
+main.os = types.SimpleNamespace(_exit=lambda c: calls.append("exit"))
+main.time.sleep = lambda s: None
+main._update_on_quit = lambda: calls.append("update_on_quit")
+main.app.state.stop = lambda: calls.append("stop")
+main.app.state.quit = lambda: calls.append("quit")
+try:
+    main._stop(True)
+    check("restart stops only the server", calls == ["stop", "exit"], calls)
+    calls.clear(); main._stop(False)
+    check("quit closes everything", calls == ["update_on_quit", "quit", "exit"], calls)
+finally:
+    main.os, main.time.sleep, main._update_on_quit = real_os, real_sleep, real_uoq
+    main.app.state.stop = main.app.state.quit = None
+check("launcher keeps the window on --restart", '"--restart" in flags) and app_windows()' in (ROOT / "PDFactory.pyw").read_text(encoding="utf-8"))
+
 shutil.rmtree(W, ignore_errors=True)
 print("FAILS:", fails if fails else "none")
 sys.exit(1 if fails else 0)

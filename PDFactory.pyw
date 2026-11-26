@@ -248,7 +248,7 @@ def alive():
 
 def stop_old():
     try:
-        post("api/shutdown")
+        post("api/shutdown", {"keep_window": True})   # restart: the open window stays and reloads
     except Exception:
         pass
     for _ in range(50):
@@ -344,7 +344,8 @@ def main():
         post("api/open-external", {"path": path})
     threading.Thread(target=refresh_windows_setup, name="windows-setup", daemon=True).start()
     # after a silent update the installer starts us with --updated: the old window is still open and reloads by itself
-    if "--tiho" not in flags and not ("--updated" in flags and app_windows()):
+    # after a restart (Update now in a git copy) the old window is still open and reloads by itself too
+    if "--tiho" not in flags and not (("--updated" in flags or "--restart" in flags) and app_windows()):
         open_window()
     if "--instaliraj" in flags:
         try:

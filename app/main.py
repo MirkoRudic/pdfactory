@@ -50,6 +50,7 @@ selfupdate.clean(DATA / "updates")
 app = FastAPI()
 localguard.install(app, log)          # F9: only our own window (no DNS rebinding, no CSRF)
 app.state.quit = None
+app.state.stop = None
 ASK_QUIT = False               # tray menu "Quit": the window asks for confirmation (P4)
 SEEN = {"t": 0.0}               # last poll of an open app window (V5: updates install only when no window is open)
 INBOX: list[dict] = []          # files opened from outside (double click on a PDF) waiting for the window
@@ -593,17 +594,24 @@ if winsetup.WIN:
     threading.Thread(target=_auto_update, name="auto-update", daemon=True).start()
 
 
-@app.post("/api/shutdown")
-def shutdown():
-    log.info("shutdown from the app")
-
-    def stop():
-        time.sleep(0.3)
+def _stop(keep_window: bool):
+    time.sleep(0.3)
+    if keep_window:
+        # restart after an update (V2/V5): only the server goes, the open window waits and reloads itself
+        if app.state.stop:
+            app.state.stop()
+    else:
         _update_on_quit()
         if app.state.quit:
             app.state.quit()
-        os._exit(0)
-    threading.Thread(target=stop, daemon=True).start()
+    os._exit(0)
+
+
+@app.post("/api/shutdown")
+def shutdown(body: dict = Body(default={})):
+    keep = bool(body.get("keep_window"))
+    log.info("shutdown from the app%s", " (restart, window stays)" if keep else "")
+    threading.Thread(target=_stop, args=(keep,), daemon=True).start()
     return {"ok": True}
 
 
