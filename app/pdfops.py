@@ -257,8 +257,21 @@ def compose(items: list[dict], objects: dict | None = None, forms: dict | None =
         s = get(first)
         with s.lock:
             out = fitz.open("pdf", s.doc.tobytes())
+    elif len({it["src"] for it in items}) == 1 and len({it["page"] for it in items}) == len(items):
+        # pages of one file (deleted, reordered, rotated): select() keeps the outline, metadata and
+        # internal links; page-by-page insert_pdf drops all three (QA 27.11.2026)
+        s = get(first)
+        with s.lock:
+            out = fitz.open("pdf", s.doc.tobytes())
+        out.select([it["page"] for it in items])
+        for p, it in zip(out, items):
+            if it.get("rot"):
+                p.set_rotation((p.rotation + it["rot"]) % 360)
     else:
         out = fitz.open()
+        with get(first).lock:
+            meta = get(first).doc.metadata
+        out.set_metadata({k: v for k, v in meta.items() if k not in ("format", "encryption") and v})
         for it in items:
             s = get(it["src"])
             with s.lock:
