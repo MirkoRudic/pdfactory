@@ -329,7 +329,9 @@ def split(body: dict = Body(...)):
     paths = []
     for i, part in enumerate(body["parts"], 1):
         doc = pdfops.compose(part, body.get("objects"), body.get("forms"))
-        paths.append(pdfops.save_doc(doc, str(Path(folder) / f"{stem}_{i}.pdf")))
+        # a file of the same name is replaced, but its old version goes to data/rezerva, as on Save
+        paths.append(pdfops.save_doc(doc, str(Path(folder) / f"{stem}_{i}.pdf"), DATA / "rezerva",
+                                     settings.load().get("backup_keep", 20)))
         doc.close()
     return {"paths": paths, "folder": folder}
 
