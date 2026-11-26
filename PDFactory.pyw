@@ -284,7 +284,9 @@ def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     flags = {a for a in sys.argv[1:] if a.startswith("--")}
     path = str(Path(args[0]).resolve()) if args else None
-    if path and Path(path).stem == "choose-default":   # winsetup marker: PDFactory was just picked, nothing to open
+    # winsetup marker (data/tmp/choose-default.pdf): PDFactory was just picked, nothing to open.
+    # Only that file: a user's own choose-default.pdf elsewhere is opened, not deleted.
+    if path and Path(path).parent == (DATA / "tmp").resolve() and Path(path).stem == "choose-default":
         Path(path).unlink(missing_ok=True)
         path = None
     if "--instaliraj" in flags:
