@@ -32,7 +32,7 @@ for _old in (DATA / "logs").glob("pdfabrika_*.log"):      # logs from the first 
     try:
         _old.rename(_old.with_name(_old.name.replace("pdfabrika_", "pdfactory_", 1)))
     except OSError:
-        pass
+        pass  # a log of the same name already exists: the old one stays as it is
 
 import applog  # noqa: E402
 
@@ -250,7 +250,7 @@ def stop_old():
     try:
         post("api/shutdown", {"keep_window": True})   # restart: the open window stays and reloads
     except Exception:
-        pass
+        pass  # old server not running or not answering: the port check below decides
     for _ in range(50):
         if not alive():
             return True
@@ -291,12 +291,15 @@ def main():
         path = None
     if "--instaliraj" in flags:
         install()
+        # not the Windows default-apps page straight away (no context): the app asks in its own dialog on start
+        DATA.mkdir(parents=True, exist_ok=True)
+        (DATA / "ask_default").write_text("1", encoding="utf-8")
     if "--uninstall" in flags:          # called by the uninstaller (Setup.exe)
         import winsetup
         try:
             post("api/shutdown")
         except Exception:
-            pass
+            pass  # app not running: nothing to stop before unregistering
         winsetup.unregister()
         return
     if "--want-default" in flags:       # Setup.exe task "Make PDFactory the default": the app asks, with context, on start
@@ -347,24 +350,16 @@ def main():
     # after a restart (Update now in a git copy) the old window is still open and reloads by itself too
     if "--tiho" not in flags and not (("--updated" in flags or "--restart" in flags) and app_windows()):
         open_window()
-    if "--instaliraj" in flags:
-        try:
-            import winsetup
-            if not winsetup.is_default():
-                time.sleep(2)
-                winsetup.open_default_apps()
-        except Exception:
-            log.exception("default apps page")
     try:
         import pystray
         from PIL import Image
-        from main import app as web
+        from main import app as web, hard_exit
 
         def quit_all(icon=None, _=None):
             close_windows()
             if icon:
                 icon.stop()
-            os._exit(0)
+            hard_exit()
         def ask_quit(icon, _):
             """P4: the question is asked in the app window, not here."""
             import main as m
@@ -375,7 +370,7 @@ def main():
             pystray.MenuItem("Open PDFactory", lambda i, _: (focus_window() or open_window()), default=True),
             pystray.MenuItem("Quit", ask_quit)))
         web.state.quit = lambda: quit_all(icon)
-        web.state.stop = lambda: (icon.stop(), os._exit(0))      # update: server only, the window waits and reloads
+        web.state.stop = lambda: (icon.stop(), hard_exit())      # update: server only, the window waits and reloads
         icon.run()
     except Exception as e:
         log.warning("tray not available: %s", e)

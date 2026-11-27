@@ -19,11 +19,8 @@
 
 **Ostalo (nije popravljeno, odluka ili veći posao):**
 - **Ažuriranje nije potpisano** (P0 rizik): app tiho instalira poslednji .exe sa GitHub-a uz proveru samo veličine; svaki push sa novom verzijom ide svima bez ljudske provere. Predlog: SHA256/potpis u release-u + ručno odobrenje objave. Isto za build: akcije i preuzimanja bez fiksnih verzija.
-- Posle restarta servera (ažuriranje dok je prozor zatvoren): nesačuvane izmene iz spojenih dokumenata i ubačene slike se gube bez poruke.
-- Slika „na svim stranama“ nestaje kad se obriše strana na koju je ubačena (Undo je vraća).
-- PowerShell navodnici za putanje sa ’ (selfupdate).
-- P2: zastareli moduli (update.py 1.0, base.css 1.0, applog/tempdir/runlock bez F10 komentara), prazni `except` bez komentara, `os._exit` preskače čišćenje `data/tmp` i poslednji red dnevnika, `--instaliraj` otvara Windows prozor, sitne razlike SPEC/CLAUDE (D5–D16).
-- `tests/ui_flow.py` traži dugme „Recognize text“ kog više nema.
+- Popravljeno u 0.5.1 (27.11): izmene posle restarta servera (kopije u `data/session`), slika „na svim stranama“ posle brisanja strane, PowerShell navodnici ’ ‘ (`winsetup._psq`), zastareli moduli (update 1.2, base.css 1.4, F10 komentari), prazni `except` sa komentarom, izlaz kroz `hard_exit` (čisti `data/tmp`, poslednji red dnevnika), `--instaliraj` pita u app umesto Windows prozora, `ui_flow.py` bez dugmeta „Recognize text“.
+- Ostalo: sitne razlike SPEC/AGENTS (D5–D16).
 
 **Nije provereno (Linux):** štampa, Windows dijalozi, installer i deinstalacija, ikonica pored sata, Edge meniji, tiho ažuriranje instalirane kopije, srpski OCR.
 

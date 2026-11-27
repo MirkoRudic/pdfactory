@@ -89,4 +89,4 @@ class RunLock:
             try:
                 self.path.unlink()
             except OSError:
-                pass
+                pass  # namerno: najbolji pokušaj, ne sme da obori rad

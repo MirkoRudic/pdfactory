@@ -40,7 +40,7 @@ def clean(older_than_h: float | None = None):
             if older_than_h is None or p.stat().st_mtime < cut:
                 shutil.rmtree(p) if p.is_dir() else p.unlink()
         except OSError:
-            pass
+            pass  # namerno: najbolji pokušaj, ne sme da obori rad
 
 
 @contextlib.contextmanager

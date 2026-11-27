@@ -105,5 +105,16 @@ l0 = [l["vertical"] for l in P.page_text(vs.id, 0)["lines"]]; l1 = [l["vertical"
 check("short horizontal label is not vertical", l0 == [False, False], l0)
 check("line on /Rotate 90 page is vertical", l1 == [True, True], l1)
 
+# PowerShell single-quoted strings end at ' and at the typographic quotes too (folder "Mirko’s files")
+import winsetup
+q = winsetup._psq("C:\\Mirko’s ‘new’ it's\\a.lnk")
+check("PowerShell quotes doubled", q == "C:\\Mirko’’s ‘‘new’’ it''s\\a.lnk", q)
+
+# --instaliraj does not open the Windows default-apps page without context; the app asks in its dialog
+pyw = (ROOT / "PDFactory.pyw").read_text(encoding="utf-8")
+blk = pyw[pyw.index('if "--instaliraj" in flags:'):]
+blk = blk[:blk.index('if "--uninstall"')]
+check("install asks inside the app", "ask_default" in blk and "open_default_apps" not in pyw.split("def main")[1].split('if "--default"')[0])
+
 print("FAILS:", fails if fails else "none")
 sys.exit(1 if fails else 0)

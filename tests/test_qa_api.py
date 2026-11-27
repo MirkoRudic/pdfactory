@@ -62,6 +62,54 @@ check("launcher keeps the window on --restart", '"--restart" in flags) and app_w
 # 5. inbox tells the window which server it talks to (a restart it did not ask for -> reload)
 check("inbox has the server pid", c.get("/api/inbox").json().get("pid") == main.os.getpid())
 
+# 6. a restarted server still knows dropped files and inserted images by their ids (unsaved work survives)
+import io
+from PIL import Image
+up = c.post("/api/upload", files={"file": ("bez_putanje.pdf", (W / "dok.pdf").read_bytes(), "application/pdf")}).json()
+buf = io.BytesIO(); Image.new("RGB", (40, 20), "red").save(buf, "PNG")
+iid = c.post("/api/image", files={"file": ("logo.png", buf.getvalue(), "image/png")}).json()["id"]
+pdfops.SOURCES.clear(); pdfops.IMAGES.clear()          # what a restart does to memory
+check("dropped file known after restart", c.get(f"/api/src/{up['id']}").status_code == 200)
+check("image known after restart", c.get(f"/api/image/{iid}").status_code == 200)
+doc = pdfops.compose([{"src": up["id"], "page": 0, "uid": "u"}],
+                     {"u": [{"type": "image", "img": iid, "x": 10, "y": 10, "w": 40, "h": 20, "angle": 0, "opacity": 1}]}, {})
+check("image is in the saved file after restart", len(doc[0].get_images()) == 1)
+c.post(f"/api/close/{up['id']}", json={})
+check("closing removes the session copy", not (main.DATA / "session" / f"{up['id']}.pdf").exists())
+check("unknown id is not read from disk", c.get("/api/src/..%2f..%2fx").status_code != 200)
+
+# 6b. session copies: a .pdf without its .json is dropped at start, a closed id is never reloaded,
+#     an open source is marked as used before the server stops (QA light pass 27.11.2026)
+import os, time as _t
+ses = main.DATA / "session"
+s2 = pdfops.open_path(str(W / "dok.pdf"))
+old = _t.time() - 10 * 86400
+for n in (f"{s2.id}.pdf", f"{s2.id}.json"):
+    os.utime(ses / n, (old, old))
+pdfops.touch_session()
+check("open source touched before stop", (ses / f"{s2.id}.json").stat().st_mtime > old + 86400)
+os.utime(ses / f"{s2.id}.json", (old, old)); os.utime(ses / f"{s2.id}.pdf", (_t.time(), _t.time()))
+pdfops.init_session(ses)
+check("pdf and json pruned together", (ses / f"{s2.id}.json").exists())
+(ses / "abcdef0123.pdf").write_bytes(b"%PDF")
+pdfops.init_session(ses)
+check("orphan pdf dropped", not (ses / "abcdef0123.pdf").exists())
+pdfops.close(s2.id)
+_keep_before = pdfops._keep
+pdfops._keep(f"{s2.id}.pdf", (W / "dok.pdf").read_bytes()); pdfops._keep(f"{s2.id}.json", b"{}")
+check("closed id is not reloaded", c.get(f"/api/src/{s2.id}").status_code != 200)
+pdfops._drop(f"{s2.id}.pdf"); pdfops._drop(f"{s2.id}.json")
+
+# 7. leaving through os._exit still empties data/tmp (atexit does not run there)
+left = main.DATA / "tmp" / "left_behind.txt"; left.write_text("x")
+real_os = main.os
+main.os = types.SimpleNamespace(_exit=lambda c: None, getpid=real_os.getpid)
+try:
+    main.hard_exit()
+finally:
+    main.os = real_os
+check("exit empties data/tmp", not left.exists())
+
 shutil.rmtree(W, ignore_errors=True)
 print("FAILS:", fails if fails else "none")
 sys.exit(1 if fails else 0)

@@ -123,6 +123,18 @@ async function closeDoc(key) {
   S.cur = S.docs.length ? S.docs[S.docs.length - 1].key : null;
   S.sel = null; renderAll(); persist();
 }
+// Deleting pages drops their edits, but an image placed "on all pages" moves to the first page left:
+// it belongs to the whole document, not to the page it was inserted on (QA 27.11.2026).
+function dropPages(d, uids) {
+  const gone = new Set(uids);
+  d.items = d.items.filter((x) => !gone.has(x.uid));
+  const keep = [];
+  for (const u of gone) {
+    for (const o of d.objects[u] || []) if (o.type === "image" && o.allPages) keep.push(o);
+    delete d.objects[u];
+  }
+  if (keep.length && d.items.length) (d.objects[d.items[0].uid] ||= []).push(...keep);
+}
 function switchDoc(key) {
   const old = D(); if (old) old.scroll = $("#pages").scrollTop;
   S.cur = key; S.sel = null; S.hits = []; S.hit = -1; $("#q").value = ""; $("#qn").textContent = "";
@@ -156,8 +168,18 @@ async function restore() {
     S.cur = ws.cur;
     return;
   }
-  // server restarted: reopen files from disk; unsaved edits are carried over onto the reopened file
+  // server restarted: it keeps session copies of open files, so the same ids still work (merged files,
+  // dropped files and inserted images included); only a doc it no longer knows is reopened from disk
+  // A doc without unsaved edits that has its file on disk is read from the disk again (it may have changed).
   for (const d of ws.docs) {
+    const srcs = [...new Set(d.items.map((i) => i.src))];
+    const fromCopy = d.dirty || d.base || !d.path;
+    const known = fromCopy ? await Promise.all(srcs.map((id) => api("/api/src/" + id).then(() => true, () => false))) : [];
+    if (fromCopy && srcs.length && known.every(Boolean)) {
+      S.docs.push({ ...d, base: !!(d.dirty || d.base), hist: [], fut: [], osel: new Set(), scroll: 0 });
+      continue;
+    }
+    srcs.forEach((id, k) => { if (known[k]) api("/api/close/" + id, { body: {} }).catch(() => {}); });   // not used now
     if (!d.path) continue;
     try {
       const r = await api("/api/open", { body: { paths: [d.path] } });
@@ -173,7 +195,7 @@ async function restore() {
       }
     } catch (e) { /* file moved or deleted */ }
   }
-  S.cur = S.docs.length ? S.docs[0].key : null;
+  S.cur = S.docs.some((d) => d.key === ws.cur) ? ws.cur : S.docs.length ? S.docs[0].key : null;
 }
 
 // ---------- chrome: header, tabs, footer ----------
@@ -393,7 +415,7 @@ function thumbMenu(e, i) {
   add("arrow-down", "Move down", () => { if (i >= d.items.length - 1) return; commit(); d.items.splice(i + 1, 0, d.items.splice(i, 1)[0]); d.curPage = i + 1; renderAll(); }, false, i >= d.items.length - 1);
   add("trash", "Delete page", async () => {
     if (d.items.length === 1) { await vd.message("Can't delete the only page."); return; }
-    commit(); d.items.splice(i, 1); delete d.objects[it.uid]; d.curPage = Math.min(i, d.items.length - 1); renderAll();
+    commit(); dropPages(d, [it.uid]); d.curPage = Math.min(i, d.items.length - 1); renderAll();
   }, true);
   document.body.appendChild(m);
   const w = m.offsetWidth, h = m.offsetHeight;
@@ -1228,7 +1250,7 @@ $("#oDel").onclick = async () => {
   const d = D(); const sel = selectedItems(d); if (!sel.length) { toast("Select pages."); return; }
   if (sel.length === d.items.length) { await vd.message("Can't delete all pages."); return; }
   commit();
-  d.items = d.items.filter((x) => !d.osel.has(x.uid)); sel.forEach((x) => delete d.objects[x.uid]); d.osel.clear();
+  dropPages(d, sel.map((x) => x.uid)); d.osel.clear();
   renderOrganizer();
 };
 $("#oAdd").onclick = async () => {

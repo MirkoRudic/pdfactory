@@ -33,7 +33,7 @@ def _stamp() -> str:
         try:
             parts.append(f"{d}:{d.stat().st_mtime_ns}:{sum(1 for _ in d.rglob('*'))}")
         except OSError:
-            pass
+            pass  # folder not readable: left out of the stamp, fonts are scanned again
     return "|".join(parts)
 
 
@@ -81,7 +81,7 @@ def init(cache_path):
             _families = c["families"]
             return
     except (OSError, ValueError):
-        pass
+        pass  # no or broken cache: fonts are scanned again below
     with applog.timed("fonts", "font scan"):
         _families = _scan()
     log.info("%d font families", len(_families))

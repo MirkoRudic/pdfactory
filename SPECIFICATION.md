@@ -32,6 +32,7 @@ Windows 10/11 korisnik bez tehničkog znanja: ne zna za Python, git ni portove, 
 - Leva kolona: desni klik na stranu → Copy page as image (puna rezolucija, 300 dpi), Rotate right, Move up/down, Delete page; prevlačenje menja redosled. Nigde nema menija pregledača, osim nad poljem za kucanje i označenim tekstom.
 - Skenirane strane bez teksta → OCR sam krene u pozadini (srpska latinica, ćirilica, engleski). U podnožju piše „Recognizing text x%“. Nema podešavanja ni dugmeta. Dokument zbog OCR-a **ne** postaje izmenjen.
 - Slučajno zatvoren prozor → pri ponovnom otvaranju sve izmene su tu.
+- Server restartovan (ažuriranje dok je prozor zatvoren) → otvoreni dokumenti, spojeni fajlovi, prevučeni fajlovi i ubačene slike su i dalje tu, sa nesačuvanim izmenama. Server čuva njihove kopije u `data/session` dok se dokument ne zatvori (najviše 7 dana).
 
 ## 3. Izmene (Edit)
 
@@ -42,7 +43,7 @@ Alati: Move and resize, Add text, Edit text, Highlight, Shape, Image, Fill form.
 - **Edit text**: klik na postojeći tekst → menja se cela linija, istim (ili najbližim) fontom i veličinom; podebljano i kurziv prate original, a zamena za font koji nije instaliran nikad nije teži rez iste porodice (npr. „Black“ za običan tekst). Linija ostaje jedna linija, susedne linije ostaju netaknute. Linija koja na ekranu ide odozgo nadole (bočni tekst, strana sa ugrađenom rotacijom) se ne menja: poruka „Edit text works on horizontal lines only.“ Radi i na PDF-ovima sa pogrešno mapiranim slovima (Canva, Acrobat): u polju je tekst kakav se vidi na strani, ne „drfave“.
 - **Highlight**: providan pravougaonik, ispravan i na okrenutim stranama.
 - **Shape**: pravougaonik, elipsa, linija, strelica; boja, debljina, ispuna.
-- **Image**: ubaci sliku → pomeranje, promena veličine, sečenje (crop), okretanje pod bilo kojim uglom, preslikavanje, providnost, iza teksta.
+- **Image**: ubaci sliku → pomeranje, promena veličine, sečenje (crop), okretanje pod bilo kojim uglom, preslikavanje, providnost, iza teksta. „On all pages“ → slika je na svakoj strani; brisanje strane na kojoj je ubačena je ne briše (prelazi na prvu preostalu stranu).
 - **Fill form**: polja formulara se popunjavaju na strani.
 - Prvi klik na element ga izabere; klik na već izabran tekst-okvir počinje kucanje.
 - Esc → poništi izbor. Delete → obriše izabrani element. Strelice → pomeraju ga. Ctrl+C/X/V/D → kopiraj, iseci, nalepi, dupliraj.

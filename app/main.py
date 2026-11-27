@@ -1,5 +1,6 @@
 """PDFactory web server (127.0.0.1 only, P2)."""
 import hashlib
+import logging
 import os
 import sys
 import threading
@@ -42,6 +43,7 @@ DEFAULTS = {
 }
 settings.init(DATA / "settings.json", DEFAULTS)
 tempdir.init(DATA / "tmp")
+pdfops.init_session(DATA / "session")
 update.init(APP_DIR, version_file="app/version.py", launcher="PDFactory.pyw")
 applog.auto_trim(settings.load().get("log_auto_trim_mb", 500))
 threading.Thread(target=lambda: fonts.init(DATA / "fonts.json"), name="fontovi", daemon=True).start()
@@ -257,14 +259,12 @@ async def image(file: UploadFile = File(...)):
         w, h = im.size
     except Exception:
         return err("This image can't be opened.")
-    iid = uuid.uuid4().hex[:10]
-    pdfops.IMAGES[iid] = data
-    return {"id": iid, "w": w, "h": h}
+    return {"id": pdfops.add_image(data), "w": w, "h": h}
 
 
 @app.get("/api/image/{iid}")
 def image_get(iid: str):
-    data = pdfops.IMAGES.get(iid)
+    data = pdfops.image_data(iid)
     if data is None:
         return Response(status_code=404)
     return Response(data, media_type="image/*", headers={"Cache-Control": "max-age=86400"})
@@ -526,7 +526,7 @@ def update_pull():
         r = selfupdate.apply(DATA / "updates")
         if r.get("ok"):                          # the installer replaces the files and starts the new version
             # only the server stops: the window stays, says what is happening and reloads when the new version is up
-            threading.Timer(1.5, lambda: ((getattr(app.state, "stop", None) or (lambda: None))(), os._exit(0))).start()
+            threading.Timer(1.5, lambda: ((getattr(app.state, "stop", None) or (lambda: None))(), hard_exit())).start()
         return r
     r = update.pull()
     if r.get("ok") and (r.get("changed") or _disk_version() != version.VERSION):
@@ -578,7 +578,7 @@ def _auto_update():
                     selfupdate.run(DATA / "updates" / f"PDFactory-Setup-{v}.exe", DATA / "updates", relaunch="tiho")
                     time.sleep(1.5)
                     (getattr(app.state, "stop", None) or (lambda: None))()
-                    os._exit(0)
+                    hard_exit()
                 r = update.pull()
                 if r.get("ok"):
                     log.info("background update (git)")
@@ -594,6 +594,19 @@ if winsetup.WIN:
     threading.Thread(target=_auto_update, name="auto-update", daemon=True).start()
 
 
+def hard_exit():
+    """os._exit skips atexit: first empty data/tmp and write the last log line (QA 27.11.2026, P2)."""
+    try:
+        pdfops.touch_session()
+        tempdir.clean()
+        logging.getLogger().info("shutdown pid=%s", os.getpid())
+        for h in logging.getLogger().handlers:
+            h.flush()
+    except Exception:
+        log.exception("cleanup before exit")
+    os._exit(0)
+
+
 def _stop(keep_window: bool):
     time.sleep(0.3)
     if keep_window:
@@ -604,7 +617,7 @@ def _stop(keep_window: bool):
         _update_on_quit()
         if app.state.quit:
             app.state.quit()
-    os._exit(0)
+    hard_exit()
 
 
 @app.post("/api/shutdown")

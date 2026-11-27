@@ -1,4 +1,4 @@
-/* VAJB base.css 1.0 - RULES.md UI1, UI4, UI8, UI12. Load before the app's own CSS. */
+/* VAJB base.css 1.4 - RULES.md UI1, UI4, UI8, UI12. Load before the app's own CSS. */
 
 :root, [data-theme="dark"] {
   --bg: #121316; --surface: #1a1c20; --border: #2a2d33; --text: #e8e9eb; --muted: #9a9ea6;
@@ -12,6 +12,13 @@
 
 /* UI1: scrollbar space always reserved - content never shifts */
 html { overflow-y: scroll; scrollbar-gutter: stable; }
+/* UI1: content never shifts sideways (mouse, drag, text selection); scroll containers in dialogs only vertical */
+html, body { overflow-x: hidden; }
+.vd-card, .vd-card .body { overflow-x: hidden; overscroll-behavior: contain; }
+/* UI15: a scrollbar is never closer than 12 px to text or controls. Scrolling dialog body: the scrollbar sits in
+   the card's padding, content stays aligned with the title and buttons (card padding 22 px, scrollbar 10 px). */
+.vd-card .body { overflow-y: auto; scrollbar-gutter: stable; margin-right: -20px; padding-right: 10px; }
+.scroll-box { overflow: auto; scrollbar-gutter: stable; padding-right: 14px; }   /* any other scrolling box */
 body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 var(--font); }
 
 /* UI8: no grey Windows controls */
@@ -40,3 +47,23 @@ button.danger { background: var(--danger); color: #fff; border-color: var(--dang
 .vd-input { width: 100%; box-sizing: border-box; margin-bottom: 18px; }
 .vd-buttons { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; gap: var(--gap); }
 body.vd-lock { overflow: hidden; }
+
+/* V3: version.js - "Verzija" row, update bar, toast */
+.vv-row { display: flex; align-items: center; justify-content: space-between; gap: var(--gap); min-height: 36px; }
+.vv-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.vv-st { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+.vv-ok { color: #4caf50; } .vv-muted { color: var(--muted); } .vv-new { color: var(--accent); }
+.vv-bar { display: flex; align-items: center; justify-content: center; gap: var(--gap); padding: 6px 12px;
+  background: var(--surface); border-bottom: 1px solid var(--border); }
+.vv-toast { position: fixed; left: 50%; bottom: 64px; transform: translateX(-50%); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.4); z-index: 950; }
+
+/* appwindow.js: the app's own right-click menu (P3) */
+.aw-menu { position: fixed; z-index: 900; min-width: 210px; padding: 6px; display: flex; flex-direction: column; gap: 2px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 12px 32px rgba(0,0,0,.45); }
+.aw-menu button { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; background: transparent; border: 0;
+  border-radius: 6px; color: var(--text); text-align: left; cursor: pointer; }
+.aw-menu button:hover:not(:disabled) { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.aw-menu button.danger { color: var(--danger, #e5534b); }
+.aw-menu button:disabled { opacity: .4; cursor: default; }
+.aw-menu svg { width: 16px; height: 16px; }

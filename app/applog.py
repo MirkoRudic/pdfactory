@@ -81,7 +81,7 @@ def _install_crash_hooks(root: logging.Logger):
         crash = open(_dir / "crash.log", "a", encoding="utf-8")
         faulthandler.enable(crash)
     except Exception:
-        pass
+        pass  # namerno: najbolji pokušaj, ne sme da obori rad
     threading.excepthook = lambda a: root.error(
         "thread %s died", a.thread.name if a.thread else "?",
         exc_info=(a.exc_type, a.exc_value, a.exc_traceback))
@@ -141,7 +141,7 @@ def delete_older_than(days: int) -> int:
                 p.unlink()
                 n += 1
         except OSError:
-            pass
+            pass  # namerno: najbolji pokušaj, ne sme da obori rad
     return n
 
 

@@ -123,8 +123,14 @@ def _ps(script: str) -> bool:
     return r.returncode == 0
 
 
+def _psq(v) -> str:
+    """Text for a PowerShell single-quoted string. PowerShell also ends such a string at ‘ ’ ‚ ‛, not only
+    at ' (a folder like "Mirko’s files" broke the shortcut script), so every one of them is doubled."""
+    return "".join(c * 2 if c in "'\u2018\u2019\u201a\u201b" else c for c in str(v))
+
+
 def _shortcut(lnk: Path, args: str = ""):
-    q = lambda v: str(v).replace("'", "''")        # PowerShell single-quoted strings
+    q = _psq
     s = (f"$s = (New-Object -ComObject WScript.Shell).CreateShortcut('{q(lnk)}')\n"
          f"$s.TargetPath = '{q(app_exe())}'\n"
          f"$s.Arguments = '\"{q(LAUNCHER)}\" {q(args)}'\n"

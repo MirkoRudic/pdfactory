@@ -51,7 +51,7 @@ def clean(folder: Path):
             try:
                 p.unlink()
             except OSError:
-                pass
+                pass  # installer still in use: removed on a later start
 
 
 def download(tmp_dir: Path) -> Path | None:

@@ -2,7 +2,7 @@
 from pathlib import Path
 
 APP_NAME = "PDFactory"
-VERSION = "0.5.0"
+VERSION = "0.5.1"
 _GIT = Path(__file__).resolve().parent
 
 
@@ -22,7 +22,7 @@ def git_commit() -> str:
             if line.endswith(" " + ref):
                 return line.split()[0][:7]
     except OSError:
-        pass
+        pass  # namerno: najbolji pokušaj, ne sme da obori rad
     return ""
 
 

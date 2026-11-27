@@ -42,7 +42,7 @@ with sync_playwright() as pw:
     post("api/open-external", {"path": f"{work}/flow_sken.pdf"}); pg.wait_for_timeout(2000)
     pg.click('[data-mode="read"]'); pg.wait_for_timeout(800)
     pg.screenshot(path=f"{out}/f3_scan.png")
-    pg.click("text=Recognize text"); pg.wait_for_timeout(9000)
+    pg.wait_for_timeout(9000)   # no button since 0.3.x: a scan is recognized in the background when opened
     pg.screenshot(path=f"{out}/f4_ocr.png")
     pg.fill("#q", "snimanje"); pg.press("#q", "Enter"); pg.wait_for_timeout(1000)
     print("search after ocr:", pg.inner_text("#qn"))

@@ -4,6 +4,7 @@ Coordinates exchanged with the UI are DISPLAY points: the page as it is shown, w
 applied, 1 unit = 1 pt, origin top-left. They are converted to PDF space with page.derotation_matrix.
 """
 import io
+import json
 import math
 import os
 import re
@@ -23,6 +24,84 @@ log = applog.get("pdf")
 SOURCES: dict[str, "Source"] = {}
 IMAGES: dict[str, bytes] = {}
 _lock = threading.RLock()
+# Open files and inserted images are also kept in data/session, so a restarted server (update while the
+# window is closed) still knows them by the same id and unsaved work isn't lost (QA 27.11.2026).
+SESSION: Path | None = None
+SESSION_DAYS = 7
+
+
+CLOSED: set[str] = set()     # closed in this run: never reloaded from a copy (a request still in flight)
+
+
+def _sid(name: str) -> str:
+    """Id a session file belongs to: <id>.pdf, <id>.json, img_<id>."""
+    return name.split(".")[0].removeprefix("img_")
+
+
+def init_session(folder):
+    """At startup: remember the folder and drop what nobody used for SESSION_DAYS. A source's .pdf and .json go
+    together, by the newer of the two (a .pdf without its .json can't be reopened)."""
+    global SESSION
+    SESSION = Path(folder)
+    SESSION.mkdir(parents=True, exist_ok=True)
+    old = time.time() - SESSION_DAYS * 86400
+    groups: dict[str, list[Path]] = {}
+    for f in SESSION.iterdir():
+        groups.setdefault(_sid(f.name), []).append(f)
+    for sid, files in groups.items():
+        try:
+            names = {f.name for f in files}
+            orphan = f"{sid}.pdf" in names and f"{sid}.json" not in names
+            if orphan or max(f.stat().st_mtime for f in files) < old:
+                for f in files:
+                    f.unlink()
+        except OSError:
+            log.warning("session files not removed: %s", sid)
+
+
+def touch_session():
+    """Before the server stops: what is open now counts as used now (a server running for weeks keeps its work)."""
+    if SESSION is None:
+        return
+    for sid in list(SOURCES) + [f"img_{i}" for i in list(IMAGES)]:
+        for name in (f"{sid}.pdf", f"{sid}.json") if not sid.startswith("img_") else (sid,):
+            try:
+                os.utime(SESSION / name)
+            except OSError:
+                pass  # copy not written (disk error was logged then): nothing to keep
+
+
+def _keep(name: str, data: bytes):
+    if SESSION is None:
+        return
+    try:
+        tmp = SESSION / (name + ".part")
+        tmp.write_bytes(data)
+        os.replace(tmp, SESSION / name)
+    except OSError:
+        log.exception("session copy not written: %s", name)
+
+
+def _drop(name: str):
+    if SESSION is not None:
+        (SESSION / name).unlink(missing_ok=True)
+
+
+def image_data(iid: str) -> bytes | None:
+    data = IMAGES.get(iid)
+    if data is None and SESSION is not None and re.fullmatch(r"[0-9a-f]{10}", iid or ""):
+        f = SESSION / f"img_{iid}"
+        if f.exists():
+            data = IMAGES[iid] = f.read_bytes()
+            os.utime(f)
+    return data
+
+
+def add_image(data: bytes) -> str:
+    iid = uuid.uuid4().hex[:10]
+    IMAGES[iid] = data
+    _keep(f"img_{iid}", data)
+    return iid
 
 
 class UserError(Exception):
@@ -30,8 +109,8 @@ class UserError(Exception):
 
 
 class Source:
-    def __init__(self, data: bytes, path: str | None, name: str):
-        self.id = uuid.uuid4().hex[:10]
+    def __init__(self, data: bytes, path: str | None, name: str, sid: str | None = None):
+        self.id = sid or uuid.uuid4().hex[:10]
         self.path = path
         self.name = name
         self.doc = fitz.open("pdf", data)
@@ -99,6 +178,8 @@ def _add(data: bytes, path, name) -> Source:
         raise UserError("The PDF can't be opened (damaged file).")
     with _lock:
         SOURCES[s.id] = s
+    _keep(f"{s.id}.pdf", data)
+    _keep(f"{s.id}.json", json.dumps({"path": path, "name": name}).encode())
     log.info("open %s (%d pages) id=%s", path or name, s.doc.page_count, s.id)
     return s
 
@@ -122,15 +203,41 @@ def image_to_pdf(data: bytes) -> bytes:
 
 
 def get(src_id: str) -> Source:
-    s = SOURCES.get(src_id)
+    s = SOURCES.get(src_id) or _reload(src_id)
     if not s:
         raise UserError("The document is no longer open. Open it again.")
+    return s
+
+
+def _reload(src_id: str):
+    """A source opened before the server restarted, from its session copy (same id)."""
+    if SESSION is None or not re.fullmatch(r"[0-9a-f]{10}", src_id or ""):
+        return None
+    f = SESSION / f"{src_id}.pdf"
+    with _lock:
+        if src_id in SOURCES:
+            return SOURCES[src_id]
+        if src_id in CLOSED or not f.exists():
+            return None
+        try:
+            meta = json.loads((SESSION / f"{src_id}.json").read_text(encoding="utf-8"))
+            s = Source(f.read_bytes(), meta.get("path"), meta.get("name") or "document.pdf", sid=src_id)
+        except Exception:
+            log.exception("session copy not reopened: %s", src_id)
+            return None
+        SOURCES[src_id] = s
+        for name in (f.name, f"{src_id}.json"):
+            os.utime(SESSION / name)
+    log.info("reopened after restart: %s id=%s", s.path or s.name, src_id)
     return s
 
 
 def close(src_id: str):
     with _lock:
         s = SOURCES.pop(src_id, None)
+        CLOSED.add(src_id)
+        _drop(f"{src_id}.pdf")
+        _drop(f"{src_id}.json")
     if s:
         s.doc.close()
 
@@ -420,7 +527,7 @@ def _text(page, o):
 
 def _image(page, o):
     from PIL import Image
-    data = IMAGES.get(o.get("img", ""))
+    data = image_data(o.get("img", ""))
     if data is None:
         raise UserError("The image is no longer available. Insert it again.")
     im = Image.open(io.BytesIO(data))
@@ -508,7 +615,7 @@ def save_doc(doc: fitz.Document, target: str, backup_dir: Path | None = None, ke
             try:
                 old.unlink()
             except OSError:
-                pass
+                pass  # old backup in use: removed at the next save
     tmp = t.with_name(t.name + ".pfsave")
     try:
         doc.save(str(tmp), garbage=3, deflate=True)
@@ -639,6 +746,10 @@ def ocr_source(src_id: str, lang: str, tessdata: str, fontfile: str | None):
                 log.info("ocr %s: %d/%d", s.name, i + 1, s.doc.page_count)
                 last = time.time()
         s.ocr["state"] = "gotovo"
+        if s.ocr["added"]:
+            with _lock, s.lock:
+                if s.id in SOURCES:                      # closed meanwhile: no copy left behind
+                    _keep(f"{s.id}.pdf", s.doc.tobytes())   # the text layer survives a restart too
         log.info("ocr %s done: %d pages got text (%d s)", s.name, s.ocr["added"], int(time.time() - t0))
     except Exception:
         log.exception("ocr failed %s", s.name)
