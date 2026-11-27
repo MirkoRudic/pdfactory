@@ -1,4 +1,4 @@
-// VAJB dialog.js 1.1 - replaces alert/confirm/prompt with the app's own dialog (PRAVILA.md UI4, UI5).
+// VAJB dialog.js 1.1 - replaces alert/confirm/prompt with the app's own dialog (RULES.md UI4, UI5).
 // Needs base.css. Usage:
 //   if (await vd.confirm("Obrisati projekat?", {ok: "Obriši", danger: true})) ...
 //   await vd.message("Sačuvano.")

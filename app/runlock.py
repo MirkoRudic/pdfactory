@@ -1,4 +1,4 @@
-"""VAJB runlock 1.0 - one running instance of a job at a time (PRAVILA.md P5).
+"""VAJB runlock 1.0 - one running instance of a job at a time (RULES.md P5).
 
     from runlock import RunLock
     lock = RunLock(APP_DIR / "data" / "RUN.lock", max_age_h=3)

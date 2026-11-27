@@ -4,4 +4,4 @@ Read and edit PDF files locally on Windows. Setup: double-click `Install PDFacto
 desktop shortcut, start with Windows, PDF app). At the end Windows opens the page where PDFactory can be chosen as the
 default app for .pdf files.
 
-License: GNU AGPL 3.0 (see `LICENSE`). Technical notes: `CLAUDE.md`.
+License: GNU AGPL 3.0 (see `LICENSE`). Technical notes: `AGENTS.md`.

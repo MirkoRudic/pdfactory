@@ -1,4 +1,4 @@
-/* VAJB base.css 1.0 - PRAVILA.md UI1, UI4, UI8, UI12. Load before the app's own CSS. */
+/* VAJB base.css 1.0 - RULES.md UI1, UI4, UI8, UI12. Load before the app's own CSS. */
 
 :root, [data-theme="dark"] {
   --bg: #121316; --surface: #1a1c20; --border: #2a2d33; --text: #e8e9eb; --muted: #9a9ea6;

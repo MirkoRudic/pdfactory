@@ -1,4 +1,4 @@
-"""VAJB update 1.0 - update from inside the app via git (PRAVILA.md V2). Based on Ghostcut update.py.
+"""VAJB update 1.0 - update from inside the app via git (RULES.md V2). Based on Ghostcut update.py.
 
     import update
     update.init(APP_DIR, version_file="app/version.py", launcher="myapp.pyw")

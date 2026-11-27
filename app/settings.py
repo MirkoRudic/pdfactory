@@ -1,4 +1,4 @@
-"""VAJB settings 1.0 - one readable JSON file; old files are only extended (PRAVILA.md F2, UI12).
+"""VAJB settings 1.0 - one readable JSON file; old files are only extended (RULES.md F2, UI12).
 
     import settings
     settings.init(APP_DIR / "data" / "settings.json", DEFAULTS)

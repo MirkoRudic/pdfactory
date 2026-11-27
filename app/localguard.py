@@ -1,4 +1,4 @@
-"""VAJB localguard 1.0 - a local app's server answers only its own window (PRAVILA.md F9). Based on Subtitis krug 30.
+"""VAJB localguard 1.0 - a local app's server answers only its own window (RULES.md F9). Based on Subtitis krug 30.
 
 Any web page open in the user's browser can send requests to http://127.0.0.1:<port>:
 - DNS rebinding: evil.com resolves to 127.0.0.1, the page then reads our API as "same origin" -> the Host header

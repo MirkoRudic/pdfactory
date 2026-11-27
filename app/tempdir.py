@@ -1,4 +1,4 @@
-"""VAJB tempdir 1.0 - temporary files only inside <app>/data/tmp (PRAVILA.md F1).
+"""VAJB tempdir 1.0 - temporary files only inside <app>/data/tmp (RULES.md F1).
 
     import tempdir
     tempdir.init(APP_DIR / "data" / "tmp")   # at startup: empties leftovers

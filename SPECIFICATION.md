@@ -1,7 +1,7 @@
 # PDFactory — specifikacija
 
 Šta aplikacija radi, iz ugla korisnika. Svaka izmena se prvo upiše ovde, pa u kod.
-Oblik scenarija: **kad uradim X → desi se Y**. Tehnika i zamke su u `CLAUDE.md`.
+Oblik scenarija: **kad uradim X → desi se Y**. Tehnika i zamke su u `AGENTS.md`.
 
 ## Svrha
 Lokalna, besplatna zamena za Adobe Reader na Windows-u: čitanje, izmene, strane, OCR, štampa. Sve radi na računaru, bez naloga i interneta (internet samo za proveru nove verzije).
