@@ -3,6 +3,7 @@
 Coordinates exchanged with the UI are DISPLAY points: the page as it is shown, with its rotation
 applied, 1 unit = 1 pt, origin top-left. They are converted to PDF space with page.derotation_matrix.
 """
+import atexit
 import io
 import json
 import math
@@ -44,6 +45,7 @@ def init_session(folder):
     global SESSION
     SESSION = Path(folder)
     SESSION.mkdir(parents=True, exist_ok=True)
+    atexit.register(touch_session)
     old = time.time() - SESSION_DAYS * 86400
     groups: dict[str, list[Path]] = {}
     for f in SESSION.iterdir():

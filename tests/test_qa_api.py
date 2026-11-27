@@ -41,10 +41,12 @@ src = (ROOT / "PDFactory.pyw").read_text(encoding="utf-8")
 check("marker check uses data/tmp", 'Path(path).parent == (DATA / "tmp").resolve()' in src)
 
 # 4. restart after an update keeps the window (V2/V5): only the server stops
-import types
+import types, hardexit
 calls = []
-real_os, real_sleep, real_uoq = main.os, main.time.sleep, main._update_on_quit
-main.os = types.SimpleNamespace(_exit=lambda c: calls.append("exit"))
+real_os, real_sleep, real_uoq = hardexit.os, main.time.sleep, main._update_on_quit
+real_run = hardexit.atexit._run_exitfuncs
+hardexit.atexit._run_exitfuncs = lambda: None
+hardexit.os = types.SimpleNamespace(_exit=lambda c: calls.append("exit"))
 main.time.sleep = lambda s: None
 main._update_on_quit = lambda: calls.append("update_on_quit")
 main.app.state.stop = lambda: calls.append("stop")
@@ -55,7 +57,8 @@ try:
     calls.clear(); main._stop(False)
     check("quit closes everything", calls == ["update_on_quit", "quit", "exit"], calls)
 finally:
-    main.os, main.time.sleep, main._update_on_quit = real_os, real_sleep, real_uoq
+    hardexit.os, main.time.sleep, main._update_on_quit = real_os, real_sleep, real_uoq
+    hardexit.atexit._run_exitfuncs = real_run
     main.app.state.stop = main.app.state.quit = None
 check("launcher keeps the window on --restart", '"--restart" in flags) and app_windows()' in (ROOT / "PDFactory.pyw").read_text(encoding="utf-8"))
 
@@ -102,12 +105,12 @@ pdfops._drop(f"{s2.id}.pdf"); pdfops._drop(f"{s2.id}.json")
 
 # 7. leaving through os._exit still empties data/tmp (atexit does not run there)
 left = main.DATA / "tmp" / "left_behind.txt"; left.write_text("x")
-real_os = main.os
-main.os = types.SimpleNamespace(_exit=lambda c: None, getpid=real_os.getpid)
+real_os = hardexit.os
+hardexit.os = types.SimpleNamespace(_exit=lambda c: None)
 try:
     main.hard_exit()
 finally:
-    main.os = real_os
+    hardexit.os = real_os
 check("exit empties data/tmp", not left.exists())
 
 shutil.rmtree(W, ignore_errors=True)

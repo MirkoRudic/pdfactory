@@ -1,6 +1,7 @@
 # STANJE — PDFactory (27.11.2026)
 
 ## Gde smo
+- 0.5.2 (27.11.): izlaz kroz modul `hardexit` (P11).
 - 0.5.1 (27.11.): ostaci QA — izmene ostaju posle restarta servera (`data/session`), slika na svim stranama, PowerShell navodnici, moduli, `hard_exit`, `--instaliraj` pita u app.
 - 0.5.0 (27.11.): prvi pun QA — 14 popravki (vidi QUALITY_REPORT.md), spojeno u main uz 0.4.10 (Setup sam čeka da se app ugasi, /WAITPID).
 - Verzija 0.4.9 (26.11.): izbor podrazumevanog PDF programa kroz Windows „Open with“ nad malim PDF-om (Windows 10).

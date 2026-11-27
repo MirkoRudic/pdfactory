@@ -1,6 +1,5 @@
 """PDFactory web server (127.0.0.1 only, P2)."""
 import hashlib
-import logging
 import os
 import sys
 import threading
@@ -17,6 +16,7 @@ import applog  # noqa: E402
 
 applog.setup(DATA / "logs", "pdfactory")
 import fonts  # noqa: E402
+import hardexit  # noqa: E402
 import pdfops  # noqa: E402
 import printing  # noqa: E402
 import selfupdate  # noqa: E402
@@ -595,16 +595,8 @@ if winsetup.WIN:
 
 
 def hard_exit():
-    """os._exit skips atexit: first empty data/tmp and write the last log line (QA 27.11.2026, P2)."""
-    try:
-        pdfops.touch_session()
-        tempdir.clean()
-        logging.getLogger().info("shutdown pid=%s", os.getpid())
-        for h in logging.getLogger().handlers:
-            h.flush()
-    except Exception:
-        log.exception("cleanup before exit")
-    os._exit(0)
+    """P11: os._exit skips atexit; hardexit runs it first (data/tmp, session copies, last log line)."""
+    hardexit.exit()
 
 
 def _stop(keep_window: bool):
