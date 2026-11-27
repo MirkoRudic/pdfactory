@@ -248,7 +248,7 @@ def alive():
 
 def stop_old():
     try:
-        post("api/shutdown")
+        post("api/shutdown", {"keep_window": True})   # restart: the open window stays and reloads
     except Exception:
         pass
     for _ in range(50):
@@ -284,7 +284,9 @@ def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     flags = {a for a in sys.argv[1:] if a.startswith("--")}
     path = str(Path(args[0]).resolve()) if args else None
-    if path and Path(path).stem == "choose-default":   # winsetup marker: PDFactory was just picked, nothing to open
+    # winsetup marker (data/tmp/choose-default.pdf): PDFactory was just picked, nothing to open.
+    # Only that file: a user's own choose-default.pdf elsewhere is opened, not deleted.
+    if path and Path(path).parent == (DATA / "tmp").resolve() and Path(path).stem == "choose-default":
         Path(path).unlink(missing_ok=True)
         path = None
     if "--instaliraj" in flags:
@@ -342,7 +344,8 @@ def main():
         post("api/open-external", {"path": path})
     threading.Thread(target=refresh_windows_setup, name="windows-setup", daemon=True).start()
     # after a silent update the installer starts us with --updated: the old window is still open and reloads by itself
-    if "--tiho" not in flags and not ("--updated" in flags and app_windows()):
+    # after a restart (Update now in a git copy) the old window is still open and reloads by itself too
+    if "--tiho" not in flags and not (("--updated" in flags or "--restart" in flags) and app_windows()):
         open_window()
     if "--instaliraj" in flags:
         try:

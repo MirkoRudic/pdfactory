@@ -1,6 +1,7 @@
 // PDFactory - UI. Plain JS, no build step.
 // Coordinates of objects are display points of the page (rotation applied, origin top-left, 1 = 1 pt).
 "use strict";
+window.VD_LABELS = { cancel: "Cancel", ok: "Continue", message: "OK", save: "Save" };   // UI is English (T1)
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const PT = 96 / 72;                       // px per pt at 100%
@@ -84,7 +85,8 @@ function snapshot(d) { return JSON.stringify({ items: d.items, objects: d.object
 function commit(d = D()) {
   if (!d) return;
   d.hist.push(snapshot(d)); if (d.hist.length > 100) d.hist.shift();
-  d.fut = []; d.dirty = true; persist(); renderChrome();
+  // callers change the document right after commit(): save it once they are done (it was saved before)
+  d.fut = []; d.dirty = true; setTimeout(persist); renderChrome();
 }
 function undo(redo = false) {
   const d = D(); if (!d) return;
@@ -93,7 +95,8 @@ function undo(redo = false) {
   to.push(snapshot(d));
   const s = JSON.parse(from.pop());
   d.items = s.items; d.objects = s.objects; d.forms = s.forms;
-  d.dirty = d.hist.length > 0;      // back at the first step = as it was opened or last saved
+  // back at the first step = as it was opened or last saved; a doc restored with unsaved edits stays unsaved
+  d.dirty = d.hist.length > 0 || !!d.base;
   S.sel = null; renderAll(); persist();
 }
 async function openPaths(paths) {
@@ -149,7 +152,7 @@ async function restore() {
   let ws; try { ws = JSON.parse(localStorage.getItem("pdfactory.ws") || "null"); } catch (e) { ws = null; }
   if (!ws || !ws.docs || !ws.docs.length) return;
   if (ws.pid === S.pid) {
-    for (const d of ws.docs) S.docs.push({ ...d, hist: [], fut: [], osel: new Set(), scroll: 0 });
+    for (const d of ws.docs) S.docs.push({ ...d, base: !!(d.dirty || d.base), hist: [], fut: [], osel: new Set(), scroll: 0 });
     S.cur = ws.cur;
     return;
   }
@@ -161,7 +164,7 @@ async function restore() {
       const info = r.docs[0];
       const srcs = new Set(d.items.map((i) => i.src));
       if (srcs.size === 1 && d.dirty) {
-        const nd = { ...d, hist: [], fut: [], osel: new Set(), scroll: 0, srcInfo: { [info.id]: info } };
+        const nd = { ...d, base: true, hist: [], fut: [], osel: new Set(), scroll: 0, srcInfo: { [info.id]: info } };
         nd.items = d.items.filter((i) => i.page < info.pages.length).map((i) => ({ ...i, src: info.id }));
         S.docs.push(nd);
       } else {
@@ -1029,6 +1032,9 @@ async function hoverSpan(e, pg, it) {
 async function fixAt(px, py, pg, it) {
   const s = await spanAt(px, py, it);
   if (!s) { if (it.rot) toast("Edit text works on pages not rotated in Pages. Save and try again."); return; }
+  // a line that runs top-to-bottom on screen (sideways text, a /Rotate 90 page) would be redacted only in
+  // part and rewritten horizontally over its neighbours (QA 27.11.2026): not editable
+  if (s.vertical) { toast("Edit text works on horizontal lines only."); return; }
   const used = (D().objects[it.uid] || []).some((o) => o.type === "fix" && o.orig.join() === s.bbox.join());
   if (used) return;
   $$(".spanhint", pg).forEach((x) => x.remove());
@@ -1093,7 +1099,15 @@ async function buildForms(pg, it) {
   for (const f of fields) {
     let el;
     const v = f.name in vals ? vals[f.name] : f.value;
-    if (f.type === "CheckBox" || f.type === "RadioButton") {
+    if (f.type === "RadioButton") {
+      // one value per group: the chosen option's on-state (a boolean turned every option on)
+      el = document.createElement("input"); el.type = "checkbox"; el.dataset.radio = f.name;
+      el.checked = v === f.on || (v === true && f.value === f.on);
+      el.onchange = () => {
+        commit(); vals[f.name] = el.checked ? f.on : "Off"; persist();
+        pg.querySelectorAll("input[data-radio]").forEach((x) => { if (x !== el && x.dataset.radio === f.name) x.checked = false; });
+      };
+    } else if (f.type === "CheckBox") {
       el = document.createElement("input"); el.type = "checkbox"; el.checked = v === true || (v && v !== "Off");
       el.onchange = () => { commit(); vals[f.name] = el.checked; persist(); };
     } else if (f.options && f.options.length) {
@@ -1201,6 +1215,9 @@ function rotObj(o, W, H, by) {     // clockwise steps of 90; W x H = page size b
     } else if (o.type === "text" || o.type === "fix") {
       const cx = o.x + o.w / 2, cy = o.y + o.h / 2; const nx = cH - cy, ny = cx;
       o.x = nx - o.w / 2; o.y = ny - o.h / 2;
+    } else if (o.type === "image") {   // turns with the page around its center (swapping w/h squashed it)
+      const cx = o.x + o.w / 2, cy = o.y + o.h / 2; const nx = cH - cy, ny = cx;
+      o.x = nx - o.w / 2; o.y = ny - o.h / 2; o.angle = ((o.angle || 0) + 90) % 360;
     } else { [o.x, o.y, o.w, o.h] = [cH - (o.y + o.h), o.x, o.h, o.w]; }
     if (o.orig) { const r = o.orig; o.orig = [cH - r[3], r[0], cH - r[1], r[2]]; }
   }
@@ -1262,7 +1279,7 @@ async function save(ask = false) {
   if (!r || r.cancelled) return;
   const info = r.doc;
   d.name = info.name; d.path = info.path; d.items = itemsFromInfo(info); d.objects = {}; d.forms = {};
-  d.srcInfo = { [info.id]: info }; d.dirty = false; d.hist = []; d.fut = []; d.osel.clear(); S.sel = null;
+  d.srcInfo = { [info.id]: info }; d.dirty = false; d.base = false; d.hist = []; d.fut = []; d.osel.clear(); S.sel = null;
   formCache.clear();
   renderAll(); persist();
   savedToast(r.path);
@@ -1646,7 +1663,10 @@ addEventListener("drop", async (e) => {
 async function pollInbox() {
   try {
     const r = await api("/api/inbox");
+    // the server was restarted without this window asking (update from elsewhere, --restart): its
+    // document ids are gone, so reload and restore the work from storage
     r.docs.forEach(addDoc);
+    if (r.pid && S.pid && r.pid !== S.pid) { persist(); location.reload(); return; }
     if (r.errors.length) vd.message(r.errors.join("\n"));
     if (r.askQuit) quit();
   } catch (e) { /* server restarting */ }

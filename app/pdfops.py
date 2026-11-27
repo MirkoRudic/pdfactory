@@ -49,7 +49,23 @@ class Source:
         return {"id": self.id, "name": self.name, "path": self.path, "pages": pages,
                 "hasText": any(len(p.get_text("text").strip()) > 20 for p in self.doc),
                 # a page with a picture and (almost) no text is a scan: recognized in the background
-                "needsOcr": any(len(p.get_text("text").strip()) < 20 and p.get_images() for p in self.doc)}
+                "needsOcr": any(_needs_ocr(p) for p in self.doc)}
+
+
+def _needs_ocr(p) -> bool:
+    """A scan: a picture and (almost) no visible text, and no invisible OCR layer yet. Counting all text
+    re-recognized pages that already had a short OCR layer (one more layer on every open + save); counting
+    none skipped scans with a printed header or page number (QA 27.11.2026)."""
+    if not p.get_images():
+        return False
+    visible = invisible = 0
+    for sp in p.get_texttrace():
+        n = sum(1 for c in sp["chars"] if chr(c[0]).strip())
+        if sp["type"] == 3:
+            invisible += n
+        else:
+            visible += n
+    return visible < 20 and invisible == 0
 
 
 # ---------- opening ----------
@@ -155,7 +171,10 @@ def page_text(src_id: str, page: int):
                         r |= fitz.Rect(sp["bbox"])
                     r = r * rm
                     c = main["color"]
+                    dx, dy = line.get("dir", (1, 0))
+                    vertical = (abs(dy) > abs(dx)) != (p.rotation % 180 == 90)   # runs top-to-bottom on screen
                     lines.append({"bbox": [round(r.x0, 2), round(r.y0, 2), round(r.x1, 2), round(r.y1, 2)],
+                                  "vertical": vertical,
                                   "text": "".join(sp["text"] for sp in line["spans"]).strip(),
                                   "size": round(main["size"], 1), "font": fonts.match(main["font"]), "pdfFont": main["font"],
                                   "bold": bool(main["flags"] & 16) or "bold" in main["font"].lower(),
@@ -257,8 +276,21 @@ def compose(items: list[dict], objects: dict | None = None, forms: dict | None =
         s = get(first)
         with s.lock:
             out = fitz.open("pdf", s.doc.tobytes())
+    elif len({it["src"] for it in items}) == 1 and len({it["page"] for it in items}) == len(items):
+        # pages of one file (deleted, reordered, rotated): select() keeps the outline, metadata and
+        # internal links; page-by-page insert_pdf drops all three (QA 27.11.2026)
+        s = get(first)
+        with s.lock:
+            out = fitz.open("pdf", s.doc.tobytes())
+        out.select([it["page"] for it in items])
+        for p, it in zip(out, items):
+            if it.get("rot"):
+                p.set_rotation((p.rotation + it["rot"]) % 360)
     else:
         out = fitz.open()
+        with get(first).lock:
+            meta = get(first).doc.metadata
+        out.set_metadata({k: v for k, v in meta.items() if k not in ("format", "encryption") and v})
         for it in items:
             s = get(it["src"])
             with s.lock:
@@ -280,10 +312,21 @@ def compose(items: list[dict], objects: dict | None = None, forms: dict | None =
 
 def _apply_forms(page, vals: dict):
     for w in page.widgets() or []:
-        if w.field_name in vals:
-            v = vals[w.field_name]
+        # a merged file with an already used field name gets it renamed by insert_pdf ("Text1 [13]")
+        name = w.field_name if w.field_name in vals else re.sub(r" \[\d+\]$", "", w.field_name)
+        if name in vals:
+            v = vals[name]
             try:
-                if w.field_type in (2, 5):  # checkbox, radio
+                if w.field_type == 5 and isinstance(v, str):  # radio: the chosen option's on-state
+                    # set /AS directly: field_value + update() leave every option of the group on
+                    on = w.on_state()
+                    doc = page.parent
+                    doc.xref_set_key(w.xref, "AS", "/" + on if v == on else "/Off")
+                    par = doc.xref_get_key(w.xref, "Parent")
+                    if par[0] == "xref" and (v == on or v == "Off"):
+                        doc.xref_set_key(int(par[1].split()[0]), "V", "/" + (on if v == on else "Off"))
+                    continue
+                elif w.field_type in (2, 5):  # checkbox (radio saved by an older version: True/False)
                     w.field_value = w.on_state() if v else "Off"
                 else:
                     w.field_value = str(v)
@@ -559,7 +602,9 @@ def ocr_source(src_id: str, lang: str, tessdata: str, fontfile: str | None):
             # so pages keep rendering while a long scan is being recognized
             with s.lock:
                 p = s.doc[i]
-                need = len(p.get_text("text").strip()) < 20
+                # only pages without any text: a page with an OCR layer from an earlier save is not
+                # recognized again (with "< 20 chars" every open + save added one more layer)
+                need = _needs_ocr(p)
                 pix = p.get_pixmap(dpi=300) if need else None  # grayscale pixmaps give no text (measured)
                 prect = p.rect
             if need:
@@ -582,7 +627,9 @@ def ocr_source(src_id: str, lang: str, tessdata: str, fontfile: str | None):
                             morph = None
                             if tl > 0:
                                 k = r.width / tl
-                                morph = (pt, fitz.Matrix(k, 1)) if 0.2 < k < 5 else None
+                                # morph works in PDF space: on a /Rotate 90/270 page the word runs along y
+                                mk = fitz.Matrix(1, k) if p.rotation % 180 else fitz.Matrix(k, 1)
+                                morph = (pt, mk) if 0.2 < k < 5 else None
                             p.insert_text(pt, txt, fontsize=fs, render_mode=3, rotate=p.rotation, morph=morph, **kw)
                         except Exception:
                             p.insert_text(pt, txt, fontsize=fs, render_mode=3, rotate=p.rotation, **kw)

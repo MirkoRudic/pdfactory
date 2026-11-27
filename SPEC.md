@@ -39,7 +39,7 @@ Alati: Move and resize, Add text, Edit text, Highlight, Shape, Image, Fill form.
 
 - **Add text**: klik na stranu → okvir za kucanje. Ništa ne ukucam i kliknem dalje → na strani **ne ostaje ništa** (ni natpis „Tekst“) i nema koraka za Undo.
 - Izbor fonta → svi instalirani fontovi, svaki prikazan svojim izgledom; veličina, boja, podebljano, kurziv, poravnanje.
-- **Edit text**: klik na postojeći tekst → menja se cela linija, istim (ili najbližim) fontom i veličinom; podebljano i kurziv prate original, a zamena za font koji nije instaliran nikad nije teži rez iste porodice (npr. „Black“ za običan tekst). Linija ostaje jedna linija, susedne linije ostaju netaknute. Radi i na PDF-ovima sa pogrešno mapiranim slovima (Canva, Acrobat): u polju je tekst kakav se vidi na strani, ne „drfave“.
+- **Edit text**: klik na postojeći tekst → menja se cela linija, istim (ili najbližim) fontom i veličinom; podebljano i kurziv prate original, a zamena za font koji nije instaliran nikad nije teži rez iste porodice (npr. „Black“ za običan tekst). Linija ostaje jedna linija, susedne linije ostaju netaknute. Linija koja na ekranu ide odozgo nadole (bočni tekst, strana sa ugrađenom rotacijom) se ne menja: poruka „Edit text works on horizontal lines only.“ Radi i na PDF-ovima sa pogrešno mapiranim slovima (Canva, Acrobat): u polju je tekst kakav se vidi na strani, ne „drfave“.
 - **Highlight**: providan pravougaonik, ispravan i na okrenutim stranama.
 - **Shape**: pravougaonik, elipsa, linija, strelica; boja, debljina, ispuna.
 - **Image**: ubaci sliku → pomeranje, promena veličine, sečenje (crop), okretanje pod bilo kojim uglom, preslikavanje, providnost, iza teksta.
@@ -50,7 +50,7 @@ Alati: Move and resize, Add text, Edit text, Highlight, Shape, Image, Fill form.
 
 ## 4. Strane (Pages)
 
-- Prevlačenje → novi redosled. Okretanje, brisanje, izdvajanje u novi PDF, deljenje po opsegu (npr. `1-3, 5`), dodavanje drugog PDF-a ili slike.
+- Prevlačenje → novi redosled. Okretanje, brisanje, izdvajanje u novi PDF, deljenje na izabranim stranama (svaka izabrana strana počinje novi deo; fajl istog imena prvo ide u rezervu), dodavanje drugog PDF-a ili slike.
 - Ctrl+A → izabere sve strane.
 
 ## 5. Undo / Redo
@@ -85,7 +85,7 @@ Alati: Move and resize, Add text, Edit text, Highlight, Shape, Image, Fill form.
 
 - Zaglavlje: levo Open | Undo Redo; sredina Read / Edit / Pages; desno Save, Print, Settings, Quit. Bez logoa i imena u zaglavlju.
 - Crvena boja (Acrobat stil), simetrično i poravnato. UI na engleskom, brojevi `1,200.50`.
-- Quit iz app ili ikonice pored sata sa neizmenjenim dokumentom → izlaz; sa izmenjenim → pita.
+- Quit iz app ili ikonice pored sata uvek pita u dijalogu app (P4); sa izmenjenim dokumentom navodi šta nije sačuvano.
 
 ---
 

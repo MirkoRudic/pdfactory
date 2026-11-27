@@ -1,4 +1,4 @@
-// VAJB dialog.js 1.0 - replaces alert/confirm/prompt with the app's own dialog (PRAVILA.md UI4, UI5).
+// VAJB dialog.js 1.1 - replaces alert/confirm/prompt with the app's own dialog (PRAVILA.md UI4, UI5).
 // Needs base.css. Usage:
 //   if (await vd.confirm("Obrisati projekat?", {ok: "Obriši", danger: true})) ...
 //   await vd.message("Sačuvano.")
@@ -54,13 +54,15 @@
     });
   }
 
+  // default button labels: Serbian; an app with another UI language sets window.VD_LABELS before use
+  const L = (k, sr) => (window.VD_LABELS || {})[k] || sr;
   window.vd = {
     confirm: (text, o = {}) => open({ text, buttons: [
-      { label: o.cancel || "Odustani", cancel: true },
-      { label: o.ok || "Nastavi", value: true, cls: o.danger ? "danger" : "primary" }] }),
-    message: (text, o = {}) => open({ text, buttons: [{ label: o.ok || "U redu", value: true, cls: "primary" }] }),
+      { label: o.cancel || L("cancel", "Odustani"), cancel: true },
+      { label: o.ok || L("ok", "Nastavi"), value: true, cls: o.danger ? "danger" : "primary" }] }),
+    message: (text, o = {}) => open({ text, buttons: [{ label: o.ok || L("message", "U redu"), value: true, cls: "primary" }] }),
     prompt: (text, o = {}) => open({ text, input: { value: o.value }, buttons: [
-      { label: o.cancel || "Odustani", cancel: true },
-      { label: o.ok || "Sačuvaj", value: true, cls: "primary" }] }),
+      { label: o.cancel || L("cancel", "Odustani"), cancel: true },
+      { label: o.ok || L("save", "Sačuvaj"), value: true, cls: "primary" }] }),
   };
 })();

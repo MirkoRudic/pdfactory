@@ -50,6 +50,7 @@ selfupdate.clean(DATA / "updates")
 app = FastAPI()
 localguard.install(app, log)          # F9: only our own window (no DNS rebinding, no CSRF)
 app.state.quit = None
+app.state.stop = None
 ASK_QUIT = False               # tray menu "Quit": the window asks for confirmation (P4)
 SEEN = {"t": 0.0}               # last poll of an open app window (V5: updates install only when no window is open)
 INBOX: list[dict] = []          # files opened from outside (double click on a PDF) waiting for the window
@@ -84,7 +85,8 @@ def index():
         html = html.replace(f'"{f}"', f'"/static/{f}?v={_hash(APP / "static" / f)}"')
     html = html.replace('"/logo.png"', f'"/logo.png?v={_hash(APP_DIR / "assets" / "pdfactory_256.png")}"')   # UI11
     s = settings.load()
-    html = html.replace('data-theme="dark"', f'data-theme="{s.get("theme", "dark")}"')
+    theme = s.get("theme") if s.get("theme") in ("dark", "light") else "dark"
+    html = html.replace('data-theme="dark"', f'data-theme="{theme}"')
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 
@@ -174,7 +176,7 @@ def inbox():
             docs.append(src.info())
         except pdfops.UserError as e:
             errors.append(f"{Path(it['path']).name}: {e}")
-    return {"docs": docs, "errors": errors, "askQuit": ask}
+    return {"docs": docs, "errors": errors, "askQuit": ask, "pid": os.getpid()}
 
 
 @app.get("/api/recent")
@@ -329,7 +331,9 @@ def split(body: dict = Body(...)):
     paths = []
     for i, part in enumerate(body["parts"], 1):
         doc = pdfops.compose(part, body.get("objects"), body.get("forms"))
-        paths.append(pdfops.save_doc(doc, str(Path(folder) / f"{stem}_{i}.pdf")))
+        # a file of the same name is replaced, but its old version goes to data/rezerva, as on Save
+        paths.append(pdfops.save_doc(doc, str(Path(folder) / f"{stem}_{i}.pdf"), DATA / "rezerva",
+                                     settings.load().get("backup_keep", 20)))
         doc.close()
     return {"paths": paths, "folder": folder}
 
@@ -435,7 +439,9 @@ def get_settings():
 @app.post("/api/settings")
 def set_settings(body: dict = Body(...)):
     s = settings.load()
-    for k in ("theme", "ocr_lang", "tessdata"):
+    if body.get("theme") in ("dark", "light"):   # goes into index.html as is: only known values
+        s["theme"] = body["theme"]
+    for k in ("ocr_lang", "tessdata"):
         if k in body:
             s[k] = body[k]
     settings.save(s)
@@ -588,17 +594,24 @@ if winsetup.WIN:
     threading.Thread(target=_auto_update, name="auto-update", daemon=True).start()
 
 
-@app.post("/api/shutdown")
-def shutdown():
-    log.info("shutdown from the app")
-
-    def stop():
-        time.sleep(0.3)
+def _stop(keep_window: bool):
+    time.sleep(0.3)
+    if keep_window:
+        # restart after an update (V2/V5): only the server goes, the open window waits and reloads itself
+        if app.state.stop:
+            app.state.stop()
+    else:
         _update_on_quit()
         if app.state.quit:
             app.state.quit()
-        os._exit(0)
-    threading.Thread(target=stop, daemon=True).start()
+    os._exit(0)
+
+
+@app.post("/api/shutdown")
+def shutdown(body: dict = Body(default={})):
+    keep = bool(body.get("keep_window"))
+    log.info("shutdown from the app%s", " (restart, window stays)" if keep else "")
+    threading.Thread(target=_stop, args=(keep,), daemon=True).start()
     return {"ok": True}
 
 

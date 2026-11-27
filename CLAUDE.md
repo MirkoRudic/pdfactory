@@ -33,7 +33,7 @@ Port **8802**, folder `D:\VAJB\pdfactory`, repo `MirkoRudic/pdfactory`, Python u
 - Zum pri otvaranju je „Automatski“: širina prve strane, najviše 100% (A4 je na širokom ekranu bio 161%). Računa se po strani koja se čita, ne po najširoj; stranica koja se čita se centrira i vodoravno (šire strane prave širu traku).
 
 - „Proveri“ je gledao samo git (lokalno vs GitHub). Kad je kod na disku noviji od pokrenutog servera (kopiran ili povučen dok app radi), pisalo je „Najnovija verzija“ uz staru verziju. Sada `/api/update` poredi i verziju sa diska sa pokrenutom (`restart`), a Ažuriraj tada samo restartuje.
-- Nove verzije na laptop idu kroz `git push` + Ažuriraj u app (Windows git ima pristup privatnom repou), ne kopiranjem fajlova.
+- Nove verzije na laptop idu kroz `git push` + Ažuriraj u app (repo je javan, 27.11.2026; release API se čita bez tokena), ne kopiranjem fajlova.
 
 - Prazan „Dodaj tekst“ ne ostaje na strani i nije korak za Poništi: okvir se pravi bez koraka, korak nastaje na prvom slovu, a prazan okvir se briše kad izgubi fokus (bio je natpis „Tekst“ na svakom kliku).
 - OCR nema podešavanja ni dugme: strane sa slikom i bez teksta (`needsOcr`) se prepoznaju u pozadini čim se fajl otvori (srp_latn+srp+eng); dokument ne postaje „izmenjen“. Strana je zaključana samo dok se čita/piše, sam OCR ide bez brave (inače se strane ne iscrtavaju dok OCR radi).
@@ -59,12 +59,12 @@ Port **8802**, folder `D:\VAJB\pdfactory`, repo `MirkoRudic/pdfactory`, Python u
 ## Izuzeci od pravila
 - T1, T3: UI je na engleskom (Mirko, 23.11.2026), brojevi engleski (`1,200.50`). Komentari i CLAUDE.md ostaju kako jesu.
 - Licenca: AGPL 3.0 zbog PyMuPDF (`LICENSE`, Settings → About).
-- Deljenje: `PDFactory-Setup.exe` pravi GitHub Actions (`.github/workflows/setup.yml`, Inno Setup `packaging/setup.iss`) na svaki push: svoj Python (embeddable + tkinter iz punog), `python\PDFactory.exe` sa ikonicom (rcedit), srp tessdata, čarobnjak (folder, prečice, start sa Windows-om, podrazumevani PDF), deinstalacija (`--uninstall` briše registar). Gotov fajl je na grani `dist`. Instalirana kopija nema `.git` (bez ažuriranja iz app); `winsetup.INSTALLED` = postoji `python\PDFactory.exe`.
-- Ranije za drugare: zip bez `.git`, `.venv`, `data`, sa srp tessdata; `Install PDFactory.vbs` instalira Python preko winget ako ga nema. Fajl skinut sa interneta: Windows pri dvokliku jednom pita „Open“ (nepotpisan fajl); bez toga samo uz kupljen sertifikat za potpisivanje koda. Bez `.git` nema dugmeta za ažuriranje.
+- Deljenje: `PDFactory-Setup.exe` pravi GitHub Actions (`.github/workflows/setup.yml`, Inno Setup `packaging/setup.iss`) na svaki push: svoj Python (embeddable + tkinter iz punog), `python\PDFactory.exe` sa ikonicom (rcedit), srp tessdata, čarobnjak (folder, prečice, start sa Windows-om, podrazumevani PDF), deinstalacija (`--uninstall` briše registar). Gotov fajl je na grani `dist`. Instalirana kopija nema `.git`; ažurira se iz GitHub Releases (`selfupdate.py`, V5); `winsetup.INSTALLED` = postoji `python\PDFactory.exe`.
+- Ranije za drugare: zip bez `.git`, `.venv`, `data`, sa srp tessdata; `Install PDFactory.vbs` instalira Python preko winget ako ga nema. Fajl skinut sa interneta: Windows pri dvokliku jednom pita „Open“ (nepotpisan fajl); bez toga samo uz kupljen sertifikat za potpisivanje koda. Ta stara zip kopija bez `.git` nema ažuriranje.
 
 ## Napomene
 - Otvori / Sačuvaj kao / folder: comdlg32 preko ctypes (tkinter nema u ugrađenom Python-u instalirane kopije); po UI4 dozvoljeno.
 - OCR i štampa: napredak u prozoru, bez Windows obaveštenja (O1).
 
 ## Testovi
-`python tests/test_pdfops.py` (bez pregledača), `tests/ui_check.py` i `tests/ui_flow.py` (Playwright, server na 8802).
+`python tests/test_pdfops.py` (bez pregledača), `python tests/test_qa.py`, `python tests/test_qa_api.py`, `node tests/test_qa_js.js` (nalazi QA 27.11.2026); `tests/ui_check.py` i `tests/ui_flow.py` (Playwright, server na 8802; zastareli: ui_flow traži dugme „Recognize text“ kog više nema, ui_check je popravljen).
