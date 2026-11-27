@@ -2,7 +2,7 @@
 from pathlib import Path
 
 APP_NAME = "PDFactory"
-VERSION = "0.4.9"
+VERSION = "0.4.10"
 _GIT = Path(__file__).resolve().parent
 
 

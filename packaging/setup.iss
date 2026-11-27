@@ -65,6 +65,36 @@ Type: filesandordirs; Name: "{app}\data"
 Type: filesandordirs; Name: "{app}\app\__pycache__"
 
 [Code]
+// /WAITPID=<pid>: the app that started this update. Started at once, Setup found the app still running,
+// could not close it (no window) and aborted (measured 26.11.2026, Windows 10); a hidden PowerShell that
+// waited instead never started Setup on the workshop computer (27.11.2026). So Setup itself waits.
+function OpenProcess(Access: Cardinal; Inherit: Boolean; Pid: Cardinal): THandle;
+  external 'OpenProcess@kernel32.dll stdcall';
+function WaitForSingleObject(Handle: THandle; Ms: Cardinal): Cardinal;
+  external 'WaitForSingleObject@kernel32.dll stdcall';
+function CloseHandle(Handle: THandle): Boolean;
+  external 'CloseHandle@kernel32.dll stdcall';
+
+function InitializeSetup: Boolean;
+var
+  Pid: Integer;
+  H: THandle;
+begin
+  Result := True;
+  Pid := StrToIntDef(ExpandConstant('{param:WAITPID|0}'), 0);
+  if Pid > 0 then
+  begin
+    H := OpenProcess($00100000, False, Pid);   // SYNCHRONIZE
+    if H <> 0 then
+    begin
+      Log(Format('waiting for pid %d', [Pid]));
+      WaitForSingleObject(H, 60000);
+      CloseHandle(H);
+    end;
+    Sleep(500);
+  end;
+end;
+
 function Relaunch: Boolean;
 begin
   Result := ExpandConstant('{param:RELAUNCH|window}') <> 'none';

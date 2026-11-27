@@ -100,26 +100,19 @@ def ready(tmp_dir: Path) -> str:
 
 
 def run(setup: Path, tmp_dir: Path, relaunch: str = "window"):
-    """Runs the installer silently once this process has exited. relaunch: window = start the app again
-    (the open window reloads), tiho = start it in the tray only, none = do not start it (the user quit).
-    Started right away, the installer found the app still running, could not close it (no window) and
-    aborted with suppressed message boxes (measured 26.11.2026, Windows 10): so a hidden PowerShell waits
-    for this PID first."""
+    """Runs the installer silently. relaunch: window = start the app again (the open window reloads),
+    tiho = start it in the tray only, none = do not start it (the user quit).
+    /WAITPID: Setup waits for this process to exit before it replaces files (setup.iss InitializeSetup);
+    started at once without it, Setup could not close the app and aborted (26.11.2026, Windows 10)."""
     app_dir = Path(__file__).resolve().parents[1]
     args = [str(setup), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", f"/DIR={app_dir}",
-            f"/RELAUNCH={relaunch}", f"/LOG={Path(tmp_dir) / 'setup.log'}"]   # the log says what went wrong, if anything
-    log.info("running %s (after pid %s exits)", " ".join(args), os.getpid())
-    q = lambda s: "'" + str(s).replace("'", "''") + "'"
-    # Start-Process joins ArgumentList with spaces: a value with a space goes in double quotes (/DIR="C:\a b")
-    pa = [a if " " not in a else a.split("=", 1)[0] + '="' + a.split("=", 1)[1] + '"' for a in args[1:]]
-    ps = (f"Wait-Process -Id {os.getpid()} -Timeout 60 -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 500; "
-          f"Start-Process -FilePath {q(setup)} -ArgumentList @({','.join(q(a) for a in pa)})")
-    cmd = ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-Command", ps]
-    flags = 0x00000008 | 0x00000200 | 0x08000000 | 0x01000000 if sys.platform == "win32" else 0   # DETACHED | NEW_GROUP | NO_WINDOW | BREAKAWAY_FROM_JOB
+            f"/RELAUNCH={relaunch}", f"/WAITPID={os.getpid()}", f"/LOG={Path(tmp_dir) / 'setup.log'}"]
+    log.info("running %s", " ".join(args))
+    flags = 0x00000008 | 0x00000200 | 0x01000000 if sys.platform == "win32" else 0   # DETACHED | NEW_GROUP | BREAKAWAY_FROM_JOB
     try:
-        subprocess.Popen(cmd, cwd=str(app_dir), creationflags=flags, close_fds=True)
+        subprocess.Popen(args, cwd=str(app_dir), creationflags=flags, close_fds=True)
     except OSError:                      # breakaway not allowed in this job: without it
-        subprocess.Popen(cmd, cwd=str(app_dir), creationflags=flags & ~0x01000000, close_fds=True)
+        subprocess.Popen(args, cwd=str(app_dir), creationflags=flags & ~0x01000000, close_fds=True)
 
 
 def apply(tmp_dir: Path, relaunch: str = "window") -> dict:
